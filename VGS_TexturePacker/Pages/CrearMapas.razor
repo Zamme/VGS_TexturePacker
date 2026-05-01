@@ -1,0 +1,239 @@
+@page "/crearmapas"
+@inject IJSRuntime JS
+@using Microsoft.AspNetCore.Components.Forms
+@using System.IO
+
+<PageTitle>CrearMapas</PageTitle>
+
+<h1>CrearMapas</h1>
+
+<p>Sube una textura difusa (color base) y se generaran automaticamente los mapas Ambient Occlusion, Roughness y Metallic.</p>
+
+<div class="mb-3">
+    <label class="btn btn-primary">
+        Cargar textura difusa
+        <InputFile OnChange="OnDiffuseSelectedAsync" accept="image/*" class="d-none" />
+    </label>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(diffuseFileName))
+{
+    <p class="mb-2"><strong>Textura cargada:</strong> @diffuseFileName</p>
+}
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <p class="text-danger">@errorMessage</p>
+}
+
+@if (!string.IsNullOrWhiteSpace(diffusePreview))
+{
+    <div class="mt-4">
+        <h4>Textura difusa</h4>
+        <img src="@diffusePreview" alt="Textura difusa" class="img-fluid rounded border" />
+
+        <div class="mt-4 border rounded p-3">
+            <h5>Ajustes de generacion</h5>
+
+            <div class="mb-3">
+                <label class="form-label" for="aoStrengthRange">Intensidad AO: @aoStrengthPercent%</label>
+                <input id="aoStrengthRange" type="range" class="form-range" min="0" max="200" @bind="aoStrengthPercent" @bind:event="oninput" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="roughnessContrastRange">Contraste Roughness: @roughnessContrastPercent%</label>
+                <input id="roughnessContrastRange" type="range" class="form-range" min="0" max="200" @bind="roughnessContrastPercent" @bind:event="oninput" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="metallicThresholdRange">Umbral Metallic: @metallicThresholdPercent%</label>
+                <input id="metallicThresholdRange" type="range" class="form-range" min="0" max="100" @bind="metallicThresholdPercent" @bind:event="oninput" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="metallicIntensityRange">Intensidad Metallic: @metallicIntensityPercent%</label>
+                <input id="metallicIntensityRange" type="range" class="form-range" min="0" max="200" @bind="metallicIntensityPercent" @bind:event="oninput" />
+            </div>
+
+            <button class="btn btn-secondary" @onclick="RegenerateMapsAsync">Regenerar mapas</button>
+        </div>
+    </div>
+}
+
+@if (HasGeneratedMaps)
+{
+    <div class="mt-4">
+        <h4>Mapas generados</h4>
+        <div class="row g-3 mt-1">
+            <div class="col-12 col-md-4">
+                <div class="border rounded p-3 h-100">
+                    <h5>Ambient Occlusion</h5>
+                    <img src="@aoPreview" alt="Mapa Ambient Occlusion" class="img-fluid rounded border mb-3" />
+                    <button class="btn btn-outline-primary w-100" @onclick='() => DownloadMapAsync(aoPreview, "AO")'>Descargar AO</button>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="border rounded p-3 h-100">
+                    <h5>Roughness</h5>
+                    <img src="@roughnessPreview" alt="Mapa Roughness" class="img-fluid rounded border mb-3" />
+                    <button class="btn btn-outline-primary w-100" @onclick='() => DownloadMapAsync(roughnessPreview, "Roughness")'>Descargar Roughness</button>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="border rounded p-3 h-100">
+                    <h5>Metallic</h5>
+                    <img src="@metallicPreview" alt="Mapa Metallic" class="img-fluid rounded border mb-3" />
+                    <button class="btn btn-outline-primary w-100" @onclick='() => DownloadMapAsync(metallicPreview, "Metallic")'>Descargar Metallic</button>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-success mt-3" @onclick="DownloadAllAsync">Descargar todos</button>
+    </div>
+}
+
+@code {
+    private const long MaxImageSizeBytes = 20 * 1024 * 1024;
+
+    private string diffusePreview = string.Empty;
+    private string diffuseFileName = string.Empty;
+    private string diffuseBaseName = "textura";
+    private string aoPreview = string.Empty;
+    private string roughnessPreview = string.Empty;
+    private string metallicPreview = string.Empty;
+    private string errorMessage = string.Empty;
+    private int aoStrengthPercent = 100;
+    private int roughnessContrastPercent = 100;
+    private int metallicThresholdPercent = 50;
+    private int metallicIntensityPercent = 60;
+
+    private bool HasGeneratedMaps =>
+        !string.IsNullOrWhiteSpace(aoPreview)
+        && !string.IsNullOrWhiteSpace(roughnessPreview)
+        && !string.IsNullOrWhiteSpace(metallicPreview);
+
+    private async Task OnDiffuseSelectedAsync(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+
+        ResetGeneratedMaps();
+        errorMessage = string.Empty;
+
+        if (!file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            errorMessage = "El archivo seleccionado no es una imagen valida.";
+            diffusePreview = string.Empty;
+            diffuseFileName = string.Empty;
+            return;
+        }
+
+        try
+        {
+            await using var stream = file.OpenReadStream(MaxImageSizeBytes);
+            using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream);
+
+            var bytes = memoryStream.ToArray();
+            var base64 = Convert.ToBase64String(bytes);
+
+            diffusePreview = $"data:{file.ContentType};base64,{base64}";
+            diffuseFileName = file.Name;
+            diffuseBaseName = Path.GetFileNameWithoutExtension(file.Name);
+
+            await GenerateMapsFromCurrentSettingsAsync();
+        }
+        catch
+        {
+            errorMessage = "Error al procesar la textura difusa.";
+            ResetGeneratedMaps();
+        }
+    }
+
+    private async Task DownloadMapAsync(string dataUrl, string mapType)
+    {
+        if (string.IsNullOrWhiteSpace(dataUrl))
+        {
+            return;
+        }
+
+        var fileName = $"{diffuseBaseName}_{mapType}.png";
+        await JS.InvokeAsync<bool>(
+            "ormBuilder.downloadWithFormat",
+            dataUrl,
+            fileName,
+            "png",
+            1.0,
+            false);
+    }
+
+    private async Task DownloadAllAsync()
+    {
+        if (!HasGeneratedMaps)
+        {
+            return;
+        }
+
+        await DownloadMapAsync(aoPreview, "AO");
+        await DownloadMapAsync(roughnessPreview, "Roug");
+        await DownloadMapAsync(metallicPreview, "Glos");
+    }
+
+    private async Task RegenerateMapsAsync()
+    {
+        await GenerateMapsFromCurrentSettingsAsync();
+    }
+
+    private async Task GenerateMapsFromCurrentSettingsAsync()
+    {
+        if (string.IsNullOrWhiteSpace(diffusePreview))
+        {
+            return;
+        }
+
+        errorMessage = string.Empty;
+
+        try
+        {
+            var generated = await JS.InvokeAsync<GeneratedMapsResult>(
+                "ormBuilder.createMapsFromDiffuse",
+                diffusePreview,
+                aoStrengthPercent / 100.0,
+                roughnessContrastPercent / 100.0,
+                metallicThresholdPercent / 100.0,
+                metallicIntensityPercent / 100.0);
+
+            if (generated is null
+                || string.IsNullOrWhiteSpace(generated.Ao)
+                || string.IsNullOrWhiteSpace(generated.Roughness)
+                || string.IsNullOrWhiteSpace(generated.Metallic))
+            {
+                errorMessage = "No se pudieron generar los mapas con los ajustes actuales.";
+                ResetGeneratedMaps();
+                return;
+            }
+
+            aoPreview = generated.Ao;
+            roughnessPreview = generated.Roughness;
+            metallicPreview = generated.Metallic;
+        }
+        catch
+        {
+            errorMessage = "No se pudieron regenerar los mapas.";
+            ResetGeneratedMaps();
+        }
+    }
+
+    private void ResetGeneratedMaps()
+    {
+        aoPreview = string.Empty;
+        roughnessPreview = string.Empty;
+        metallicPreview = string.Empty;
+    }
+
+    private sealed class GeneratedMapsResult
+    {
+        public string Ao { get; set; } = string.Empty;
+        public string Roughness { get; set; } = string.Empty;
+        public string Metallic { get; set; } = string.Empty;
+    }
+}

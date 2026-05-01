@@ -1,0 +1,140 @@
+@page "/autocarpeta"
+@inject IJSRuntime JS
+
+<PageTitle>AutoCarpeta</PageTitle>
+
+<h1>AutoCarpeta</h1>
+
+<p>Selecciona una carpeta, buscarem AO, Roughness i Metallic i es generaran les textures ORM en una subcarpeta ORMs.</p>
+
+<div class="row g-3 mb-3">
+    <div class="col-12 col-md-4">
+        <label class="form-label" for="outputFormatFolder">Format de sortida</label>
+        <select id="outputFormatFolder" class="form-select" @bind="selectedOutputFormat">
+            <option value="png">PNG</option>
+            <option value="webp">WebP (Lossy 80%)</option>
+        </select>
+    </div>
+    <div class="col-12 col-md-8 d-flex align-items-end">
+        <button class="btn btn-primary" @onclick="ProcessFolderAsync" disabled="@(!directoryPickerSupported || isProcessing)">
+            @((isProcessing) ? "Processant carpeta..." : "Seleccionar carpeta i generar ORMs")
+        </button>
+    </div>
+</div>
+
+@if (!directoryPickerSupported)
+{
+    <p class="text-warning">Aquest navegador no suporta l'acces directe a carpetes (showDirectoryPicker).</p>
+}
+
+@if (!string.IsNullOrWhiteSpace(statusMessage))
+{
+    <p class="mt-3">@statusMessage</p>
+}
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <p class="text-danger mt-3">@errorMessage</p>
+}
+
+@if (lastResult is not null)
+{
+    <div class="mt-4 border rounded p-3">
+        <h4 class="mb-3">Resultat del processat</h4>
+        <p class="mb-1"><strong>Grups detectats:</strong> @lastResult.TotalGroups</p>
+        <p class="mb-1"><strong>ORMs creats:</strong> @lastResult.CreatedCount</p>
+        <p class="mb-2"><strong>Elements omesos:</strong> @lastResult.SkippedCount</p>
+
+        @if (lastResult.Errors?.Count > 0)
+        {
+            <h5 class="mt-3">Detall d'errors</h5>
+            <ul class="mb-0">
+                @foreach (var err in lastResult.Errors)
+                {
+                    <li>@err</li>
+                }
+            </ul>
+        }
+    </div>
+}
+
+@code {
+    private string selectedOutputFormat = "png";
+    private bool directoryPickerSupported = true;
+    private bool isProcessing;
+    private string statusMessage = string.Empty;
+    private string errorMessage = string.Empty;
+    private AutoFolderProcessResult? lastResult;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        directoryPickerSupported = await JS.InvokeAsync<bool>("ormBuilder.supportsDirectoryPicker");
+        if (!directoryPickerSupported)
+        {
+            StateHasChanged();
+        }
+    }
+
+    private async Task ProcessFolderAsync()
+    {
+        isProcessing = true;
+        statusMessage = "Selecciona una carpeta per iniciar el processat...";
+        errorMessage = string.Empty;
+        lastResult = null;
+
+        try
+        {
+            var extension = selectedOutputFormat.Equals("webp", StringComparison.OrdinalIgnoreCase)
+                ? "webp"
+                : "png";
+
+            var quality = extension == "webp" ? 0.8 : 1.0;
+
+            var result = await JS.InvokeAsync<AutoFolderProcessResult>(
+                "ormBuilder.processFolderToOrm",
+                extension,
+                quality);
+
+            if (result is null)
+            {
+                errorMessage = "No s'ha rebut resposta del processat de carpeta.";
+                return;
+            }
+
+            lastResult = result;
+            if (!result.Success)
+            {
+                errorMessage = string.IsNullOrWhiteSpace(result.ErrorMessage)
+                    ? "No s'ha pogut completar el processat de carpeta."
+                    : result.ErrorMessage;
+            }
+            else
+            {
+                statusMessage = "Processat completat. Revisa el resum per veure els fitxers creats a la carpeta ORMs.";
+            }
+        }
+        catch
+        {
+            errorMessage = "No s'ha pogut processar la carpeta seleccionada.";
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private sealed class AutoFolderProcessResult
+    {
+        public bool Success { get; set; }
+        public string? ErrorMessage { get; set; }
+        public int TotalGroups { get; set; }
+        public int CreatedCount { get; set; }
+        public int SkippedCount { get; set; }
+        public List<string> Errors { get; set; } = new();
+    }
+}

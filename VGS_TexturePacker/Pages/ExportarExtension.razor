@@ -1,0 +1,330 @@
+@page "/exportarextension"
+@inject IJSRuntime JS
+
+<PageTitle>ExportarExtension</PageTitle>
+
+<h1>ExportarExtension</h1>
+
+<p>Convierte todas las imagenes de una carpeta a la extension seleccionada (PNG o WebP).</p>
+
+<div class="row g-3 mb-3">
+    <div class="col-12 col-md-6 d-grid">
+        <button class="btn btn-outline-primary" @onclick="SelectSourceFolderAsync" disabled="@(!directoryPickerSupported || isProcessing)">
+            Seleccionar carpeta origen
+        </button>
+    </div>
+    <div class="col-12 col-md-6 d-grid">
+        <button class="btn btn-outline-primary" @onclick="SelectDestinationFolderAsync" disabled="@(!directoryPickerSupported || isProcessing)">
+            Seleccionar carpeta destino
+        </button>
+    </div>
+</div>
+
+<div class="mb-3">
+    <p class="mb-1"><strong>Origen:</strong> @GetSourceStatusText()</p>
+    <p class="mb-1"><strong>Destino:</strong> @GetDestinationStatusText()</p>
+    @if (hasDestinationFolder && !destinationIsEmpty)
+    {
+        <p class="text-warning mb-0">La carpeta destino debe estar vacia para habilitar el procesado.</p>
+    }
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-12 col-md-4">
+        <label class="form-label" for="outputExtension">Extension de salida</label>
+        <select id="outputExtension" class="form-select" @bind="selectedExtension" @bind:after="OnExtensionChanged">
+            <option value="">Selecciona una extension</option>
+            <option value="png">png</option>
+            <option value="webp">webp</option>
+        </select>
+    </div>
+
+    @if (RequiresLossy)
+    {
+        <div class="col-12 col-md-8">
+            <label class="form-label" for="webpLossy">Lossy WebP (%)</label>
+            <input id="webpLossy" type="range" class="form-range" min="1" max="100" step="1" @bind="webpLossyPercent" />
+            <div>@webpLossyPercent%</div>
+        </div>
+    }
+</div>
+
+<div class="mb-3">
+    <button class="btn btn-primary" @onclick="ProcessAsync" disabled="@(!CanProcess)">
+        @(isProcessing ? "Procesando..." : "Procesar")
+    </button>
+</div>
+
+@if (!directoryPickerSupported)
+{
+    <p class="text-warning">Este navegador no soporta la seleccion directa de carpetas (showDirectoryPicker).</p>
+}
+
+@if (!string.IsNullOrWhiteSpace(statusMessage))
+{
+    <p class="mt-3">@statusMessage</p>
+}
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <p class="text-danger mt-3">@errorMessage</p>
+}
+
+@if (lastResult is not null)
+{
+    <div class="mt-4 border rounded p-3">
+        <h4 class="mb-3">Resultado de la exportacion</h4>
+        <p class="mb-1"><strong>Candidatas:</strong> @lastResult.TotalCandidates</p>
+        <p class="mb-1"><strong>Exportadas:</strong> @lastResult.ProcessedCount</p>
+        <p class="mb-2"><strong>Omitidas:</strong> @lastResult.SkippedCount</p>
+
+        @if (lastResult.Errors?.Count > 0)
+        {
+            <h5 class="mt-3">Detalle de errores</h5>
+            <ul class="mb-0">
+                @foreach (var err in lastResult.Errors)
+                {
+                    <li>@err</li>
+                }
+            </ul>
+        }
+    </div>
+}
+
+@code {
+    private bool directoryPickerSupported = true;
+    private bool isProcessing;
+
+    private bool hasSourceFolder;
+    private bool hasDestinationFolder;
+    private bool destinationIsEmpty;
+
+    private string? sourceFolderName;
+    private string? destinationFolderName;
+
+    private string selectedExtension = string.Empty;
+    private int webpLossyPercent = 80;
+
+    private string statusMessage = string.Empty;
+    private string errorMessage = string.Empty;
+    private ExtensionExportResult? lastResult;
+
+    private bool RequiresLossy => selectedExtension.Equals("webp", StringComparison.OrdinalIgnoreCase);
+
+    private bool CanProcess =>
+        directoryPickerSupported
+        && !isProcessing
+        && hasSourceFolder
+        && hasDestinationFolder
+        && destinationIsEmpty
+        && IsExtensionValid();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        directoryPickerSupported = await JS.InvokeAsync<bool>("ormBuilder.supportsDirectoryPicker");
+        if (!directoryPickerSupported)
+        {
+            StateHasChanged();
+        }
+    }
+
+    private async Task SelectSourceFolderAsync()
+    {
+        errorMessage = string.Empty;
+        statusMessage = string.Empty;
+
+        try
+        {
+            var result = await JS.InvokeAsync<DirectorySelectionResult>("ormBuilder.selectExportExtensionSourceFolder");
+            if (result is null)
+            {
+                errorMessage = "No se pudo seleccionar la carpeta origen.";
+                return;
+            }
+
+            if (!result.Success)
+            {
+                if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
+                {
+                    errorMessage = result.ErrorMessage;
+                }
+
+                return;
+            }
+
+            hasSourceFolder = true;
+            sourceFolderName = result.DirectoryName;
+            statusMessage = "Carpeta origen seleccionada.";
+        }
+        catch
+        {
+            errorMessage = "No se pudo seleccionar la carpeta origen.";
+        }
+    }
+
+    private async Task SelectDestinationFolderAsync()
+    {
+        errorMessage = string.Empty;
+        statusMessage = string.Empty;
+
+        try
+        {
+            var result = await JS.InvokeAsync<DirectorySelectionResult>("ormBuilder.selectExportExtensionDestinationFolder");
+            if (result is null)
+            {
+                errorMessage = "No se pudo seleccionar la carpeta destino.";
+                return;
+            }
+
+            if (!result.Success)
+            {
+                if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
+                {
+                    errorMessage = result.ErrorMessage;
+                }
+
+                return;
+            }
+
+            hasDestinationFolder = true;
+            destinationFolderName = result.DirectoryName;
+            destinationIsEmpty = result.IsEmpty;
+
+            if (destinationIsEmpty)
+            {
+                statusMessage = "Carpeta destino seleccionada y vacia.";
+            }
+            else
+            {
+                statusMessage = "Carpeta destino seleccionada, pero contiene archivos o carpetas.";
+            }
+        }
+        catch
+        {
+            errorMessage = "No se pudo seleccionar la carpeta destino.";
+        }
+    }
+
+    private Task OnExtensionChanged()
+    {
+        errorMessage = string.Empty;
+        statusMessage = string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private async Task ProcessAsync()
+    {
+        if (!CanProcess)
+        {
+            return;
+        }
+
+        isProcessing = true;
+        errorMessage = string.Empty;
+        statusMessage = "Procesando carpeta...";
+        lastResult = null;
+
+        try
+        {
+            var normalizedExtension = selectedExtension.Trim().ToLowerInvariant();
+            var lossyAsQuality = RequiresLossy
+                ? webpLossyPercent / 100.0
+                : 1.0;
+
+            var result = await JS.InvokeAsync<ExtensionExportResult>(
+                "ormBuilder.processExportExtensionFolder",
+                normalizedExtension,
+                lossyAsQuality);
+
+            if (result is null)
+            {
+                errorMessage = "No se recibio respuesta del exportador.";
+                return;
+            }
+
+            lastResult = result;
+
+            if (!result.Success)
+            {
+                errorMessage = string.IsNullOrWhiteSpace(result.ErrorMessage)
+                    ? "No se pudo completar la exportacion."
+                    : result.ErrorMessage;
+            }
+            else
+            {
+                statusMessage = "Exportacion completada.";
+            }
+        }
+        catch
+        {
+            errorMessage = "No se pudo procesar la exportacion.";
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private bool IsExtensionValid()
+    {
+        if (selectedExtension.Equals("png", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (selectedExtension.Equals("webp", StringComparison.OrdinalIgnoreCase))
+        {
+            return webpLossyPercent >= 1 && webpLossyPercent <= 100;
+        }
+
+        return false;
+    }
+
+    private string GetSourceStatusText()
+    {
+        if (!hasSourceFolder)
+        {
+            return "No seleccionada";
+        }
+
+        return string.IsNullOrWhiteSpace(sourceFolderName) ? "Seleccionada" : sourceFolderName;
+    }
+
+    private string GetDestinationStatusText()
+    {
+        if (!hasDestinationFolder)
+        {
+            return "No seleccionada";
+        }
+
+        var folderLabel = string.IsNullOrWhiteSpace(destinationFolderName)
+            ? "Seleccionada"
+            : destinationFolderName;
+
+        var emptyLabel = destinationIsEmpty ? "vacia" : "no vacia";
+        return $"{folderLabel} ({emptyLabel})";
+    }
+
+    private sealed class DirectorySelectionResult
+    {
+        public bool Success { get; set; }
+        public bool IsEmpty { get; set; }
+        public string? DirectoryName { get; set; }
+        public string? ErrorMessage { get; set; }
+    }
+
+    private sealed class ExtensionExportResult
+    {
+        public bool Success { get; set; }
+        public string? ErrorMessage { get; set; }
+        public int TotalCandidates { get; set; }
+        public int ProcessedCount { get; set; }
+        public int SkippedCount { get; set; }
+        public List<string> Errors { get; set; } = new();
+    }
+}

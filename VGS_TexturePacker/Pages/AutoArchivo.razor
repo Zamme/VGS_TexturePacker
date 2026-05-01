@@ -1,0 +1,335 @@
+@page "/autoarchivo"
+@inject IJSRuntime JS
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Web
+@using System.IO
+
+<PageTitle>AutoArchivo</PageTitle>
+
+<h1>AutoArchivo</h1>
+
+<p>Escull tres arxius d'una vegada (AO, Roug i Glos) i es carregaran automaticament.</p>
+
+<div class="mb-3">
+	<label class="btn btn-primary">
+		Escollir 3 imatges
+		<InputFile OnChange="OnBatchFilesSelected" multiple accept="image/*" class="d-none" />
+	</label>
+</div>
+
+<div class="row g-3 mt-1">
+	@for (var i = 0; i < 3; i++)
+	{
+		<div class="col-12 col-md-4">
+			<div class="border rounded p-3 h-100">
+				<h5>@ColumnTitles[i]</h5>
+
+				@if (!string.IsNullOrWhiteSpace(fileNames[i]))
+				{
+					<p class="mb-2"><strong>@fileNames[i]</strong></p>
+				}
+
+				@if (!string.IsNullOrWhiteSpace(errors[i]))
+				{
+					<p class="text-danger mb-0">@errors[i]</p>
+				}
+				else if (!string.IsNullOrWhiteSpace(imagePreviews[i]))
+				{
+					<img src="@imagePreviews[i]" alt="Previsualitzacio @(i + 1)" class="img-fluid rounded border" />
+				}
+			</div>
+		</div>
+	}
+</div>
+
+@if (AreAllInputsSelected)
+{
+	<div class="mt-4 p-3 border rounded">
+		<p class="mb-3">S'han seleccionat les 3 imatges. Vols crear la imatge ORM?</p>
+		<button class="btn btn-success me-2" @onclick="CreateOrmImageAsync">Si, crear ORM</button>
+		<button class="btn btn-outline-secondary" @onclick="DeclineOrmCreation">No</button>
+	</div>
+}
+
+@if (userDeclinedCreation)
+{
+	<p class="text-muted mt-3">No s'ha generat la imatge ORM.</p>
+}
+
+@if (!string.IsNullOrWhiteSpace(ormError))
+{
+	<p class="text-danger mt-3">@ormError</p>
+}
+
+@if (!string.IsNullOrWhiteSpace(ormPreview))
+{
+	<div class="mt-4">
+		<h4>Resultat ORM</h4>
+		<div class="row g-2 mb-3">
+			<div class="col-12 col-md-5">
+				<label class="form-label" for="outputNameAuto">Nom del fitxer</label>
+				<input id="outputNameAuto" class="form-control" @bind="outputFileName" />
+			</div>
+			<div class="col-12 col-md-3">
+				<label class="form-label" for="outputFormatAuto">Format</label>
+				<select id="outputFormatAuto" class="form-select" @bind="selectedOutputFormat">
+					<option value="png">PNG</option>
+					<option value="webp">WebP (Lossy 80%)</option>
+				</select>
+			</div>
+			<div class="col-12 col-md-4 d-flex align-items-end">
+				<div class="form-check mb-1">
+					<input id="chooseLocationAuto" class="form-check-input" type="checkbox" @bind="chooseSaveLocation" disabled="@(!savePickerSupported)" />
+					<label class="form-check-label" for="chooseLocationAuto">Escollir ubicacio en desar</label>
+				</div>
+			</div>
+		</div>
+		@if (!savePickerSupported)
+		{
+			<p class="text-warning mb-3">Firefox no permet aquest selector de carpeta. S'utilitzara la descarrrega normal del navegador.</p>
+		}
+		<button class="btn btn-primary mb-3" @onclick="DownloadOrmImageAsync">Descarregar ORM</button>
+		<img src="@ormPreview" alt="Resultat ORM" class="img-fluid rounded border" />
+	</div>
+}
+
+@code {
+	private const long MaxImageSizeBytes = 10 * 1024 * 1024;
+	private static readonly string[] ColumnTitles = ["Ambient Occlusion", "Roughness", "Metallic"];
+
+	private readonly string[] imagePreviews = new string[3];
+	private readonly string[] fileNames = new string[3];
+	private readonly string[] errors = new string[3];
+	private string ormPreview = string.Empty;
+	private string ormError = string.Empty;
+	private bool userDeclinedCreation;
+	private string outputFileName = "orm_texture";
+	private string selectedOutputFormat = "png";
+	private bool chooseSaveLocation = false;
+	private bool savePickerSupported = true;
+
+	private bool AreAllInputsSelected => imagePreviews.All(src => !string.IsNullOrWhiteSpace(src));
+
+	private async Task OnBatchFilesSelected(InputFileChangeEventArgs e)
+	{
+		ResetInputSlots();
+		ormPreview = string.Empty;
+		ormError = string.Empty;
+		userDeclinedCreation = false;
+
+		if (e.FileCount != 3)
+		{
+			ormError = "Has de seleccionar exactament 3 fitxers: un _AO, un _Roug i un _Glos.";
+			return;
+		}
+
+		var files = e.GetMultipleFiles(3);
+		var selectedBySlot = new IBrowserFile?[3];
+
+		foreach (var file in files)
+		{
+			if (!file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+			{
+				ormError = $"El fitxer {file.Name} no es una imatge valida.";
+				ResetInputSlots();
+				return;
+			}
+
+			var slot = GetSlotByFileName(file.Name);
+			if (slot < 0)
+			{
+				ormError = "Els noms han d'acabar amb _AO, _Roug o _Glos.";
+				ResetInputSlots();
+				return;
+			}
+
+			if (selectedBySlot[slot] is not null)
+			{
+				ormError = "Hi ha tipus duplicats. Selecciona exactament un _AO, un _Roug i un _Glos.";
+				ResetInputSlots();
+				return;
+			}
+
+			selectedBySlot[slot] = file;
+		}
+
+		if (selectedBySlot.Any(file => file is null))
+		{
+			ormError = "Falta algun tipus. Selecciona exactament un _AO, un _Roug i un _Glos.";
+			ResetInputSlots();
+			return;
+		}
+
+		for (var slot = 0; slot < selectedBySlot.Length; slot++)
+		{
+			var file = selectedBySlot[slot]!;
+
+			await using var stream = file.OpenReadStream(MaxImageSizeBytes);
+			using var memoryStream = new MemoryStream();
+			await stream.CopyToAsync(memoryStream);
+
+			var bytes = memoryStream.ToArray();
+			var base64 = Convert.ToBase64String(bytes);
+
+			imagePreviews[slot] = $"data:{file.ContentType};base64,{base64}";
+			fileNames[slot] = file.Name;
+			errors[slot] = string.Empty;
+		}
+
+		UpdateDefaultOutputName();
+		ormError = string.Empty;
+	}
+
+	private void ResetInputSlots()
+	{
+		for (var i = 0; i < 3; i++)
+		{
+			imagePreviews[i] = string.Empty;
+			fileNames[i] = string.Empty;
+			errors[i] = string.Empty;
+		}
+	}
+
+	private static int GetSlotByFileName(string fileName)
+	{
+		var nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+		if (nameWithoutExtension.EndsWith("_AO", StringComparison.OrdinalIgnoreCase))
+		{
+			return 0;
+		}
+
+		if (nameWithoutExtension.EndsWith("_Roug", StringComparison.OrdinalIgnoreCase))
+		{
+			return 1;
+		}
+
+		if (nameWithoutExtension.EndsWith("_Glos", StringComparison.OrdinalIgnoreCase))
+		{
+			return 2;
+		}
+
+		return -1;
+	}
+
+	private async Task CreateOrmImageAsync()
+	{
+		if (!AreAllInputsSelected)
+		{
+			return;
+		}
+
+		try
+		{
+			ormPreview = await JS.InvokeAsync<string>(
+				"ormBuilder.createOrm",
+				imagePreviews[0],
+				imagePreviews[1],
+				imagePreviews[2]);
+
+			ormError = string.Empty;
+			userDeclinedCreation = false;
+		}
+		catch
+		{
+			ormPreview = string.Empty;
+			ormError = "No s'ha pogut crear la imatge ORM.";
+		}
+	}
+
+	private void DeclineOrmCreation()
+	{
+		ormPreview = string.Empty;
+		ormError = string.Empty;
+		userDeclinedCreation = true;
+	}
+
+	private async Task DownloadOrmImageAsync()
+	{
+		if (string.IsNullOrWhiteSpace(ormPreview))
+		{
+			return;
+		}
+
+		var safeBaseName = string.IsNullOrWhiteSpace(outputFileName)
+			? "orm_texture"
+			: outputFileName.Trim();
+
+		var extension = selectedOutputFormat.Equals("webp", StringComparison.OrdinalIgnoreCase)
+			? "webp"
+			: "png";
+
+		var fileName = $"{safeBaseName}.{extension}";
+		var quality = extension == "webp" ? 0.8 : 1.0;
+
+		var savedWithPicker = await JS.InvokeAsync<bool>(
+			"ormBuilder.downloadWithFormat",
+			ormPreview,
+			fileName,
+			extension,
+			quality,
+			chooseSaveLocation);
+
+		if (chooseSaveLocation && !savedWithPicker)
+		{
+			ormError = "El navegador no pot obrir el selector de carpeta. A Firefox activa 'Preguntar sempre on desar els fitxers' per triar ubicacio.";
+		}
+	}
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (!firstRender)
+		{
+			return;
+		}
+
+		savePickerSupported = await JS.InvokeAsync<bool>("ormBuilder.supportsSaveFilePicker");
+		if (!savePickerSupported)
+		{
+			chooseSaveLocation = false;
+			StateHasChanged();
+		}
+	}
+
+	private void UpdateDefaultOutputName()
+	{
+		var baseName = GetBaseNameFromLoadedFiles();
+		if (!string.IsNullOrWhiteSpace(baseName))
+		{
+			outputFileName = $"{baseName}_ORM";
+		}
+	}
+
+	private string? GetBaseNameFromLoadedFiles()
+	{
+		foreach (var loadedName in fileNames)
+		{
+			if (string.IsNullOrWhiteSpace(loadedName))
+			{
+				continue;
+			}
+
+			var nameWithoutExtension = Path.GetFileNameWithoutExtension(loadedName);
+			if (nameWithoutExtension.EndsWith("_AO", StringComparison.OrdinalIgnoreCase))
+			{
+				return nameWithoutExtension[..^3];
+			}
+
+			if (nameWithoutExtension.EndsWith("_Roug", StringComparison.OrdinalIgnoreCase))
+			{
+				return nameWithoutExtension[..^5];
+			}
+
+			if (nameWithoutExtension.EndsWith("_Glo", StringComparison.OrdinalIgnoreCase))
+			{
+				return nameWithoutExtension[..^4];
+			}
+
+			if (nameWithoutExtension.EndsWith("_Glos", StringComparison.OrdinalIgnoreCase))
+			{
+				return nameWithoutExtension[..^5];
+			}
+		}
+
+		return null;
+	}
+}

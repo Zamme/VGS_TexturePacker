@@ -1,0 +1,160 @@
+@page "/crearmapascarpeta"
+@inject IJSRuntime JS
+
+<PageTitle>CrearMapasCarpeta</PageTitle>
+
+<h1>CrearMapasCarpeta</h1>
+
+<p>Selecciona una carpeta con texturas difusas. Se generaran mapas AO, Roughness y Glos para cada imagen en una nueva carpeta llamada Mapas+HoraActual.</p>
+
+<div class="mt-4 border rounded p-3">
+    <h5>Ajustes de generacion</h5>
+
+    <div class="mb-3">
+        <label class="form-label" for="aoStrengthFolderRange">Intensidad AO: @aoStrengthPercent%</label>
+        <input id="aoStrengthFolderRange" type="range" class="form-range" min="0" max="200" @bind="aoStrengthPercent" @bind:event="oninput" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label" for="roughnessContrastFolderRange">Contraste Roughness: @roughnessContrastPercent%</label>
+        <input id="roughnessContrastFolderRange" type="range" class="form-range" min="0" max="200" @bind="roughnessContrastPercent" @bind:event="oninput" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label" for="metallicThresholdFolderRange">Umbral Metallic: @metallicThresholdPercent%</label>
+        <input id="metallicThresholdFolderRange" type="range" class="form-range" min="0" max="100" @bind="metallicThresholdPercent" @bind:event="oninput" />
+    </div>
+
+    <div class="mb-0">
+        <label class="form-label" for="metallicIntensityFolderRange">Intensidad Metallic: @metallicIntensityPercent%</label>
+        <input id="metallicIntensityFolderRange" type="range" class="form-range" min="0" max="200" @bind="metallicIntensityPercent" @bind:event="oninput" />
+    </div>
+</div>
+
+<div class="mt-3 mb-3">
+    <button class="btn btn-primary" @onclick="ProcessFolderAsync" disabled="@(!directoryPickerSupported || isProcessing)">
+        @((isProcessing) ? "Procesando carpeta..." : "Seleccionar carpeta y crear mapas")
+    </button>
+</div>
+
+@if (!directoryPickerSupported)
+{
+    <p class="text-warning">Este navegador no soporta seleccion directa de carpetas (showDirectoryPicker).</p>
+}
+
+@if (!string.IsNullOrWhiteSpace(statusMessage))
+{
+    <p class="mt-3">@statusMessage</p>
+}
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <p class="text-danger mt-3">@errorMessage</p>
+}
+
+@if (lastResult is not null)
+{
+    <div class="mt-4 border rounded p-3">
+        <h4 class="mb-3">Resultado del procesado</h4>
+        <p class="mb-1"><strong>Imagenes detectadas:</strong> @lastResult.TotalImages</p>
+        <p class="mb-1"><strong>Imagenes procesadas:</strong> @lastResult.ProcessedCount</p>
+        <p class="mb-1"><strong>Imagenes omitidas:</strong> @lastResult.SkippedCount</p>
+
+        @if (!string.IsNullOrWhiteSpace(lastResult.OutputFolderName))
+        {
+            <p class="mb-2"><strong>Carpeta de salida:</strong> @lastResult.OutputFolderName</p>
+        }
+
+        @if (lastResult.Errors?.Count > 0)
+        {
+            <h5 class="mt-3">Detalle de errores</h5>
+            <ul class="mb-0">
+                @foreach (var err in lastResult.Errors)
+                {
+                    <li>@err</li>
+                }
+            </ul>
+        }
+    </div>
+}
+
+@code {
+    private bool directoryPickerSupported = true;
+    private bool isProcessing;
+    private string statusMessage = string.Empty;
+    private string errorMessage = string.Empty;
+    private CreateMapsFolderResult? lastResult;
+    private int aoStrengthPercent = 100;
+    private int roughnessContrastPercent = 100;
+    private int metallicThresholdPercent = 50;
+    private int metallicIntensityPercent = 60;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        directoryPickerSupported = await JS.InvokeAsync<bool>("ormBuilder.supportsDirectoryPicker");
+        if (!directoryPickerSupported)
+        {
+            StateHasChanged();
+        }
+    }
+
+    private async Task ProcessFolderAsync()
+    {
+        isProcessing = true;
+        statusMessage = "Selecciona una carpeta para comenzar el procesado...";
+        errorMessage = string.Empty;
+        lastResult = null;
+
+        try
+        {
+            var result = await JS.InvokeAsync<CreateMapsFolderResult>(
+                "ormBuilder.processFolderCreateMaps",
+                aoStrengthPercent / 100.0,
+                roughnessContrastPercent / 100.0,
+                metallicThresholdPercent / 100.0,
+                metallicIntensityPercent / 100.0);
+
+            if (result is null)
+            {
+                errorMessage = "No se ha recibido respuesta del procesado de carpeta.";
+                return;
+            }
+
+            lastResult = result;
+
+            if (!result.Success)
+            {
+                errorMessage = string.IsNullOrWhiteSpace(result.ErrorMessage)
+                    ? "No se ha podido completar el procesado de carpeta."
+                    : result.ErrorMessage;
+                return;
+            }
+
+            statusMessage = "Procesado completado. Revisa el resumen para ver cuantas imagenes se han convertido.";
+        }
+        catch
+        {
+            errorMessage = "No se ha podido procesar la carpeta seleccionada.";
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private sealed class CreateMapsFolderResult
+    {
+        public bool Success { get; set; }
+        public string? ErrorMessage { get; set; }
+        public int TotalImages { get; set; }
+        public int ProcessedCount { get; set; }
+        public int SkippedCount { get; set; }
+        public string OutputFolderName { get; set; } = string.Empty;
+        public List<string> Errors { get; set; } = new();
+    }
+}
