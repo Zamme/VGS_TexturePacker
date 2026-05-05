@@ -1,39 +1,39 @@
 @page "/exportarextension"
 @inject IJSRuntime JS
 
-<PageTitle>ExportarExtension</PageTitle>
+<PageTitle>Export Folder</PageTitle>
 
-<h1>ExportarExtension</h1>
+<h1>Export Folder</h1>
 
-<p>Convierte todas las imagenes de una carpeta a la extension seleccionada (PNG o WebP).</p>
+<p>Convert all images in a folder to the selected extension (PNG or WebP).</p>
 
 <div class="row g-3 mb-3">
     <div class="col-12 col-md-6 d-grid">
         <button class="btn btn-outline-primary" @onclick="SelectSourceFolderAsync" disabled="@(!directoryPickerSupported || isProcessing)">
-            Seleccionar carpeta origen
+            Select Source Folder
         </button>
     </div>
     <div class="col-12 col-md-6 d-grid">
         <button class="btn btn-outline-primary" @onclick="SelectDestinationFolderAsync" disabled="@(!directoryPickerSupported || isProcessing)">
-            Seleccionar carpeta destino
+            Select Destination Folder
         </button>
     </div>
 </div>
 
 <div class="mb-3">
-    <p class="mb-1"><strong>Origen:</strong> @GetSourceStatusText()</p>
-    <p class="mb-1"><strong>Destino:</strong> @GetDestinationStatusText()</p>
+    <p class="mb-1"><strong>Source:</strong> @GetSourceStatusText()</p>
+    <p class="mb-1"><strong>Destination:</strong> @GetDestinationStatusText()</p>
     @if (hasDestinationFolder && !destinationIsEmpty)
     {
-        <p class="text-warning mb-0">La carpeta destino debe estar vacia para habilitar el procesado.</p>
+        <p class="text-warning mb-0">The destination folder must be empty to enable processing.</p>
     }
 </div>
 
 <div class="row g-3 mb-3">
     <div class="col-12 col-md-4">
-        <label class="form-label" for="outputExtension">Extension de salida</label>
+        <label class="form-label" for="outputExtension">Output Extension</label>
         <select id="outputExtension" class="form-select" @bind="selectedExtension" @bind:after="OnExtensionChanged">
-            <option value="">Selecciona una extension</option>
+            <option value="">Select an extension</option>
             <option value="png">png</option>
             <option value="webp">webp</option>
         </select>
@@ -51,13 +51,13 @@
 
 <div class="mb-3">
     <button class="btn btn-primary" @onclick="ProcessAsync" disabled="@(!CanProcess)">
-        @(isProcessing ? "Procesando..." : "Procesar")
+        @(isProcessing ? "Processing..." : "Process")
     </button>
 </div>
 
 @if (!directoryPickerSupported)
 {
-    <p class="text-warning">Este navegador no soporta la seleccion directa de carpetas (showDirectoryPicker).</p>
+    <p class="text-warning">This browser does not support direct folder selection (showDirectoryPicker).</p>
 }
 
 @if (!string.IsNullOrWhiteSpace(statusMessage))
@@ -73,14 +73,14 @@
 @if (lastResult is not null)
 {
     <div class="mt-4 border rounded p-3">
-        <h4 class="mb-3">Resultado de la exportacion</h4>
-        <p class="mb-1"><strong>Candidatas:</strong> @lastResult.TotalCandidates</p>
-        <p class="mb-1"><strong>Exportadas:</strong> @lastResult.ProcessedCount</p>
-        <p class="mb-2"><strong>Omitidas:</strong> @lastResult.SkippedCount</p>
+        <h4 class="mb-3">Export Result</h4>
+        <p class="mb-1"><strong>Candidates:</strong> @lastResult.TotalCandidates</p>
+        <p class="mb-1"><strong>Exported:</strong> @lastResult.ProcessedCount</p>
+        <p class="mb-2"><strong>Skipped:</strong> @lastResult.SkippedCount</p>
 
         @if (lastResult.Errors?.Count > 0)
         {
-            <h5 class="mt-3">Detalle de errores</h5>
+            <h5 class="mt-3">Error Details</h5>
             <ul class="mb-0">
                 @foreach (var err in lastResult.Errors)
                 {
@@ -143,7 +143,7 @@
             var result = await JS.InvokeAsync<DirectorySelectionResult>("ormBuilder.selectExportExtensionSourceFolder");
             if (result is null)
             {
-                errorMessage = "No se pudo seleccionar la carpeta origen.";
+                errorMessage = "Could not select the source folder.";
                 return;
             }
 
@@ -159,11 +159,11 @@
 
             hasSourceFolder = true;
             sourceFolderName = result.DirectoryName;
-            statusMessage = "Carpeta origen seleccionada.";
+            statusMessage = "Source folder selected.";
         }
         catch
         {
-            errorMessage = "No se pudo seleccionar la carpeta origen.";
+            errorMessage = "Could not select the source folder.";
         }
     }
 
@@ -177,7 +177,7 @@
             var result = await JS.InvokeAsync<DirectorySelectionResult>("ormBuilder.selectExportExtensionDestinationFolder");
             if (result is null)
             {
-                errorMessage = "No se pudo seleccionar la carpeta destino.";
+                errorMessage = "Could not select the destination folder.";
                 return;
             }
 
@@ -197,16 +197,16 @@
 
             if (destinationIsEmpty)
             {
-                statusMessage = "Carpeta destino seleccionada y vacia.";
+                statusMessage = "Destination folder selected and empty.";
             }
             else
             {
-                statusMessage = "Carpeta destino seleccionada, pero contiene archivos o carpetas.";
+                statusMessage = "Destination folder selected, but it contains files or folders.";
             }
         }
         catch
         {
-            errorMessage = "No se pudo seleccionar la carpeta destino.";
+            errorMessage = "Could not select the destination folder.";
         }
     }
 
@@ -226,7 +226,7 @@
 
         isProcessing = true;
         errorMessage = string.Empty;
-        statusMessage = "Procesando carpeta...";
+        statusMessage = "Processing folder...";
         lastResult = null;
 
         try
@@ -243,7 +243,7 @@
 
             if (result is null)
             {
-                errorMessage = "No se recibio respuesta del exportador.";
+                errorMessage = "No response received from the exporter.";
                 return;
             }
 
@@ -252,17 +252,17 @@
             if (!result.Success)
             {
                 errorMessage = string.IsNullOrWhiteSpace(result.ErrorMessage)
-                    ? "No se pudo completar la exportacion."
+                    ? "Could not complete the export."
                     : result.ErrorMessage;
             }
             else
             {
-                statusMessage = "Exportacion completada.";
+                statusMessage = "Export completed.";
             }
         }
         catch
         {
-            errorMessage = "No se pudo procesar la exportacion.";
+            errorMessage = "Could not process the export.";
         }
         finally
         {
@@ -289,24 +289,24 @@
     {
         if (!hasSourceFolder)
         {
-            return "No seleccionada";
+            return "Not selected";
         }
 
-        return string.IsNullOrWhiteSpace(sourceFolderName) ? "Seleccionada" : sourceFolderName;
+        return string.IsNullOrWhiteSpace(sourceFolderName) ? "Selected" : sourceFolderName;
     }
 
     private string GetDestinationStatusText()
     {
         if (!hasDestinationFolder)
         {
-            return "No seleccionada";
+            return "Not selected";
         }
 
         var folderLabel = string.IsNullOrWhiteSpace(destinationFolderName)
-            ? "Seleccionada"
+            ? "Selected"
             : destinationFolderName;
 
-        var emptyLabel = destinationIsEmpty ? "vacia" : "no vacia";
+        var emptyLabel = destinationIsEmpty ? "empty" : "not empty";
         return $"{folderLabel} ({emptyLabel})";
     }
 

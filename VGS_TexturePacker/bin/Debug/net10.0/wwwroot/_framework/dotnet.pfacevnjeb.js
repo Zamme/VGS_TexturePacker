@@ -5,7 +5,7 @@ var e=!1;const t=async()=>WebAssembly.validate(new Uint8Array([0,97,115,109,1,0,
   "mainAssemblyName": "VGS_TexturePacker",
   "applicationEnvironment": "Development",
   "resources": {
-    "hash": "sha256-vA+/2HTxL4+1UolGkpwTon1isFsb895N+3W4t7TVVzg=",
+    "hash": "sha256-BqcfB/O06s9plAx+LHmDdjuBRHIwlTWA312OH13KkF0=",
     "jsModuleNative": [
       {
         "name": "dotnet.native.4xbsgn06op.js"
@@ -1242,16 +1242,16 @@ var e=!1;const t=async()=>WebAssembly.validate(new Uint8Array([0,97,115,109,1,0,
       },
       {
         "virtualPath": "VGS_TexturePacker.wasm",
-        "name": "VGS_TexturePacker.cay6fij31o.wasm",
-        "integrity": "sha256-FNqu0UorA+dmSsHiOsBhL1fB5RGB4jxilVLmIxzv948=",
+        "name": "VGS_TexturePacker.6krvynmqy5.wasm",
+        "integrity": "sha256-RpvmwsFvyNQbKtWii+8qhBEJCP1GELF1Am6Ysy76QLc=",
         "cache": "force-cache"
       }
     ],
     "pdb": [
       {
         "virtualPath": "VGS_TexturePacker.pdb",
-        "name": "VGS_TexturePacker.9ukptat2qg.pdb",
-        "integrity": "sha256-P9Vg1/Mz7sDxZ5R2at/tY55Q9aSKjuxawHu/AnBwD4k=",
+        "name": "VGS_TexturePacker.jt18ju98sf.pdb",
+        "integrity": "sha256-N3aN7tfNJgwF2spEhDU4SjEPZx5P4eQCxuAjdMsIRLE=",
         "cache": "force-cache"
       }
     ],

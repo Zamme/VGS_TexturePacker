@@ -4,15 +4,13 @@
 @using Microsoft.AspNetCore.Components.Web
 @using System.IO
 
-<PageTitle>AutoArchivo</PageTitle>
+<h1>Create ORM Image</h1>
 
-<h1>AutoArchivo</h1>
-
-<p>Escull tres arxius d'una vegada (AO, Roug i Glos) i es carregaran automaticament.</p>
+<p>Select three files at once (AO, Roughness, and Gloss) and they will be loaded automatically.</p>
 
 <div class="mb-3">
 	<label class="btn btn-primary">
-		Escollir 3 imatges
+		Choose 3 images
 		<InputFile OnChange="OnBatchFilesSelected" multiple accept="image/*" class="d-none" />
 	</label>
 </div>
@@ -35,7 +33,7 @@
 				}
 				else if (!string.IsNullOrWhiteSpace(imagePreviews[i]))
 				{
-					<img src="@imagePreviews[i]" alt="Previsualitzacio @(i + 1)" class="img-fluid rounded border" />
+					<img src="@imagePreviews[i]" alt="Preview @(i + 1)" class="img-fluid rounded border" />
 				}
 			</div>
 		</div>
@@ -45,15 +43,15 @@
 @if (AreAllInputsSelected)
 {
 	<div class="mt-4 p-3 border rounded">
-		<p class="mb-3">S'han seleccionat les 3 imatges. Vols crear la imatge ORM?</p>
-		<button class="btn btn-success me-2" @onclick="CreateOrmImageAsync">Si, crear ORM</button>
+		<p class="mb-3">All 3 images have been selected. Do you want to create the ORM image?</p>
+		<button class="btn btn-success me-2" @onclick="CreateOrmImageAsync">Yes, create ORM</button>
 		<button class="btn btn-outline-secondary" @onclick="DeclineOrmCreation">No</button>
 	</div>
 }
 
 @if (userDeclinedCreation)
 {
-	<p class="text-muted mt-3">No s'ha generat la imatge ORM.</p>
+	<p class="text-muted mt-3">The ORM image was not generated.</p>
 }
 
 @if (!string.IsNullOrWhiteSpace(ormError))
@@ -64,10 +62,10 @@
 @if (!string.IsNullOrWhiteSpace(ormPreview))
 {
 	<div class="mt-4">
-		<h4>Resultat ORM</h4>
+		<h4>ORM Result</h4>
 		<div class="row g-2 mb-3">
 			<div class="col-12 col-md-5">
-				<label class="form-label" for="outputNameAuto">Nom del fitxer</label>
+				<label class="form-label" for="outputNameAuto">File Name</label>
 				<input id="outputNameAuto" class="form-control" @bind="outputFileName" />
 			</div>
 			<div class="col-12 col-md-3">
@@ -80,16 +78,16 @@
 			<div class="col-12 col-md-4 d-flex align-items-end">
 				<div class="form-check mb-1">
 					<input id="chooseLocationAuto" class="form-check-input" type="checkbox" @bind="chooseSaveLocation" disabled="@(!savePickerSupported)" />
-					<label class="form-check-label" for="chooseLocationAuto">Escollir ubicacio en desar</label>
+					<label class="form-check-label" for="chooseLocationAuto">Choose save location</label>
 				</div>
 			</div>
 		</div>
 		@if (!savePickerSupported)
 		{
-			<p class="text-warning mb-3">Firefox no permet aquest selector de carpeta. S'utilitzara la descarrrega normal del navegador.</p>
+			<p class="text-warning mb-3">Firefox does not support this folder picker. The standard browser download flow will be used.</p>
 		}
-		<button class="btn btn-primary mb-3" @onclick="DownloadOrmImageAsync">Descarregar ORM</button>
-		<img src="@ormPreview" alt="Resultat ORM" class="img-fluid rounded border" />
+		<button class="btn btn-primary mb-3" @onclick="DownloadOrmImageAsync">Download ORM</button>
+		<img src="@ormPreview" alt="ORM Result" class="img-fluid rounded border" />
 	</div>
 }
 
@@ -119,7 +117,7 @@
 
 		if (e.FileCount != 3)
 		{
-			ormError = "Has de seleccionar exactament 3 fitxers: un _AO, un _Roug i un _Glos.";
+			ormError = "You must select exactly 3 files: one _AO, one _Roug, and one _Glos.";
 			return;
 		}
 
@@ -130,7 +128,7 @@
 		{
 			if (!file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
 			{
-				ormError = $"El fitxer {file.Name} no es una imatge valida.";
+				ormError = $"The file {file.Name} is not a valid image.";
 				ResetInputSlots();
 				return;
 			}
@@ -138,14 +136,14 @@
 			var slot = GetSlotByFileName(file.Name);
 			if (slot < 0)
 			{
-				ormError = "Els noms han d'acabar amb _AO, _Roug o _Glos.";
+				ormError = "File names must end with _AO, _Roug, or _Glos.";
 				ResetInputSlots();
 				return;
 			}
 
 			if (selectedBySlot[slot] is not null)
 			{
-				ormError = "Hi ha tipus duplicats. Selecciona exactament un _AO, un _Roug i un _Glos.";
+				ormError = "Duplicate map types detected. Select exactly one _AO, one _Roug, and one _Glos.";
 				ResetInputSlots();
 				return;
 			}
@@ -155,7 +153,7 @@
 
 		if (selectedBySlot.Any(file => file is null))
 		{
-			ormError = "Falta algun tipus. Selecciona exactament un _AO, un _Roug i un _Glos.";
+			ormError = "One map type is missing. Select exactly one _AO, one _Roug, and one _Glos.";
 			ResetInputSlots();
 			return;
 		}
@@ -232,7 +230,7 @@
 		catch
 		{
 			ormPreview = string.Empty;
-			ormError = "No s'ha pogut crear la imatge ORM.";
+			ormError = "Could not create the ORM image.";
 		}
 	}
 
@@ -271,7 +269,7 @@
 
 		if (chooseSaveLocation && !savedWithPicker)
 		{
-			ormError = "El navegador no pot obrir el selector de carpeta. A Firefox activa 'Preguntar sempre on desar els fitxers' per triar ubicacio.";
+			ormError = "The browser could not open the save picker. In Firefox, enable 'Always ask you where to save files' to choose the location.";
 		}
 	}
 

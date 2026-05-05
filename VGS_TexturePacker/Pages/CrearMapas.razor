@@ -3,22 +3,22 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using System.IO
 
-<PageTitle>CrearMapas</PageTitle>
+<PageTitle>Create Maps</PageTitle>
 
-<h1>CrearMapas</h1>
+<h1>Create Maps</h1>
 
-<p>Sube una textura difusa (color base) y se generaran automaticamente los mapas Ambient Occlusion, Roughness y Metallic.</p>
+<p>Upload a diffuse texture (base color) and the Ambient Occlusion, Roughness, and Metallic maps will be generated automatically.</p>
 
 <div class="mb-3">
     <label class="btn btn-primary">
-        Cargar textura difusa
+        Upload diffuse texture
         <InputFile OnChange="OnDiffuseSelectedAsync" accept="image/*" class="d-none" />
     </label>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(diffuseFileName))
 {
-    <p class="mb-2"><strong>Textura cargada:</strong> @diffuseFileName</p>
+    <p class="mb-2"><strong>Loaded texture:</strong> @diffuseFileName</p>
 }
 
 @if (!string.IsNullOrWhiteSpace(errorMessage))
@@ -29,33 +29,33 @@
 @if (!string.IsNullOrWhiteSpace(diffusePreview))
 {
     <div class="mt-4">
-        <h4>Textura difusa</h4>
-        <img src="@diffusePreview" alt="Textura difusa" class="img-fluid rounded border" />
+        <h4>Diffuse Texture</h4>
+        <img src="@diffusePreview" alt="Diffuse Texture" class="img-fluid rounded border" />
 
         <div class="mt-4 border rounded p-3">
-            <h5>Ajustes de generacion</h5>
+            <h5>Generation Settings</h5>
 
             <div class="mb-3">
-                <label class="form-label" for="aoStrengthRange">Intensidad AO: @aoStrengthPercent%</label>
+                <label class="form-label" for="aoStrengthRange">AO Intensity: @aoStrengthPercent%</label>
                 <input id="aoStrengthRange" type="range" class="form-range" min="0" max="200" @bind="aoStrengthPercent" @bind:event="oninput" />
             </div>
 
             <div class="mb-3">
-                <label class="form-label" for="roughnessContrastRange">Contraste Roughness: @roughnessContrastPercent%</label>
+                <label class="form-label" for="roughnessContrastRange">Roughness Contrast: @roughnessContrastPercent%</label>
                 <input id="roughnessContrastRange" type="range" class="form-range" min="0" max="200" @bind="roughnessContrastPercent" @bind:event="oninput" />
             </div>
 
             <div class="mb-3">
-                <label class="form-label" for="metallicThresholdRange">Umbral Metallic: @metallicThresholdPercent%</label>
+                <label class="form-label" for="metallicThresholdRange">Metallic Threshold: @metallicThresholdPercent%</label>
                 <input id="metallicThresholdRange" type="range" class="form-range" min="0" max="100" @bind="metallicThresholdPercent" @bind:event="oninput" />
             </div>
 
             <div class="mb-3">
-                <label class="form-label" for="metallicIntensityRange">Intensidad Metallic: @metallicIntensityPercent%</label>
+                <label class="form-label" for="metallicIntensityRange">Metallic Intensity: @metallicIntensityPercent%</label>
                 <input id="metallicIntensityRange" type="range" class="form-range" min="0" max="200" @bind="metallicIntensityPercent" @bind:event="oninput" />
             </div>
 
-            <button class="btn btn-secondary" @onclick="RegenerateMapsAsync">Regenerar mapas</button>
+            <button class="btn btn-secondary" @onclick="RegenerateMapsAsync">Regenerate Maps</button>
         </div>
     </div>
 }
@@ -63,32 +63,32 @@
 @if (HasGeneratedMaps)
 {
     <div class="mt-4">
-        <h4>Mapas generados</h4>
+        <h4>Generated Maps</h4>
         <div class="row g-3 mt-1">
             <div class="col-12 col-md-4">
                 <div class="border rounded p-3 h-100">
                     <h5>Ambient Occlusion</h5>
-                    <img src="@aoPreview" alt="Mapa Ambient Occlusion" class="img-fluid rounded border mb-3" />
-                    <button class="btn btn-outline-primary w-100" @onclick='() => DownloadMapAsync(aoPreview, "AO")'>Descargar AO</button>
+                    <img src="@aoPreview" alt="Ambient Occlusion Map" class="img-fluid rounded border mb-3" />
+                    <button class="btn btn-outline-primary w-100" @onclick='() => DownloadMapAsync(aoPreview, "AO")'>Download AO</button>
                 </div>
             </div>
             <div class="col-12 col-md-4">
                 <div class="border rounded p-3 h-100">
                     <h5>Roughness</h5>
-                    <img src="@roughnessPreview" alt="Mapa Roughness" class="img-fluid rounded border mb-3" />
-                    <button class="btn btn-outline-primary w-100" @onclick='() => DownloadMapAsync(roughnessPreview, "Roughness")'>Descargar Roughness</button>
+                    <img src="@roughnessPreview" alt="Roughness Map" class="img-fluid rounded border mb-3" />
+                    <button class="btn btn-outline-primary w-100" @onclick='() => DownloadMapAsync(roughnessPreview, "Roughness")'>Download Roughness</button>
                 </div>
             </div>
             <div class="col-12 col-md-4">
                 <div class="border rounded p-3 h-100">
                     <h5>Metallic</h5>
-                    <img src="@metallicPreview" alt="Mapa Metallic" class="img-fluid rounded border mb-3" />
-                    <button class="btn btn-outline-primary w-100" @onclick='() => DownloadMapAsync(metallicPreview, "Metallic")'>Descargar Metallic</button>
+                    <img src="@metallicPreview" alt="Metallic Map" class="img-fluid rounded border mb-3" />
+                    <button class="btn btn-outline-primary w-100" @onclick='() => DownloadMapAsync(metallicPreview, "Metallic")'>Download Metallic</button>
                 </div>
             </div>
         </div>
 
-        <button class="btn btn-success mt-3" @onclick="DownloadAllAsync">Descargar todos</button>
+        <button class="btn btn-success mt-3" @onclick="DownloadAllAsync">Download All</button>
     </div>
 }
 
@@ -97,7 +97,7 @@
 
     private string diffusePreview = string.Empty;
     private string diffuseFileName = string.Empty;
-    private string diffuseBaseName = "textura";
+    private string diffuseBaseName = "texture";
     private string aoPreview = string.Empty;
     private string roughnessPreview = string.Empty;
     private string metallicPreview = string.Empty;
@@ -121,7 +121,7 @@
 
         if (!file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
         {
-            errorMessage = "El archivo seleccionado no es una imagen valida.";
+            errorMessage = "The selected file is not a valid image.";
             diffusePreview = string.Empty;
             diffuseFileName = string.Empty;
             return;
@@ -144,7 +144,7 @@
         }
         catch
         {
-            errorMessage = "Error al procesar la textura difusa.";
+            errorMessage = "Error while processing the diffuse texture.";
             ResetGeneratedMaps();
         }
     }
@@ -207,7 +207,7 @@
                 || string.IsNullOrWhiteSpace(generated.Roughness)
                 || string.IsNullOrWhiteSpace(generated.Metallic))
             {
-                errorMessage = "No se pudieron generar los mapas con los ajustes actuales.";
+                errorMessage = "Could not generate maps with the current settings.";
                 ResetGeneratedMaps();
                 return;
             }
@@ -218,7 +218,7 @@
         }
         catch
         {
-            errorMessage = "No se pudieron regenerar los mapas.";
+            errorMessage = "Could not regenerate maps.";
             ResetGeneratedMaps();
         }
     }

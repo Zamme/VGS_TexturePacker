@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("VGS_TexturePacker")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ae5fac06324c5ce2b392e24b336691494c6ba821")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2d35b6bc4e342c72624e8fb05ff5a7ca0fd691fa")]
 [assembly: System.Reflection.AssemblyProductAttribute("VGS_TexturePacker")]
 [assembly: System.Reflection.AssemblyTitleAttribute("VGS_TexturePacker")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

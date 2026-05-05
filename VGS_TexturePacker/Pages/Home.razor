@@ -1,321 +1,76 @@
 ﻿@page "/"
-@inject IJSRuntime JS
-@using Microsoft.AspNetCore.Components.Forms
-@using Microsoft.AspNetCore.Components.Web
-@using System.IO
 
-<PageTitle>Manual</PageTitle>
+<div class="container py-4">
+    <div class="mb-4">
+        <h1 class="mb-2">VGS Texture Packer</h1>
+        <p class="lead mb-0">
+            Workspace for creating PBR maps, building ORM textures, and exporting assets to different formats.
+            From here you can access every tool and follow a recommended workflow.
+        </p>
+    </div>
 
-<h1>Manual</h1>
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="border rounded p-3 h-100">
+                <h4>Create ORMs by File</h4>
+                <p class="mb-3">Load 3 maps (AO, Roughness, and Metallic/Gloss) and generate a single ORM texture.</p>
+                <a class="btn btn-primary" href="/autoarchivo">Go to Create ORM Image</a>
+            </div>
+        </div>
 
-<p>Carrega una imatge Ambient Occlusion, una Roughness i una Metallic.</p>
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="border rounded p-3 h-100">
+                <h4>Create ORMs by Folder</h4>
+                <p class="mb-3">Select a full folder to detect groups automatically and generate ORM textures in batch.</p>
+                <a class="btn btn-primary" href="/autocarpeta">Go to Create ORM Folder</a>
+            </div>
+        </div>
 
-<div class="row g-3 mt-1">
-	@for (var i = 0; i < 3; i++)
-	{
-		var index = i;
-		<div class="col-12 col-md-4">
-			<div class="border rounded p-3 h-100">
-				<h5>@ColumnTitles[index]</h5>
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="border rounded p-3 h-100">
+                <h4>Generate Maps from Diffuse</h4>
+                <p class="mb-3">Start from a base texture and generate AO, Roughness, and Metallic using adjustable parameters.</p>
+                <a class="btn btn-primary" href="/crearmapas">Go to Create Maps</a>
+            </div>
+        </div>
 
-				<label class="btn btn-primary mb-3">
-					Escollir imatge
-					<InputFile OnChange="@(e => OnImageSelected(e, index))" accept="image/*" class="d-none" />
-				</label>
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="border rounded p-3 h-100">
+                <h4>Generate Maps by Folder</h4>
+                <p class="mb-3">Process many diffuse textures at once and create their maps in an output folder.</p>
+                <a class="btn btn-primary" href="/crearmapascarpeta">Go to Create Maps Folder</a>
+            </div>
+        </div>
 
-				@if (!string.IsNullOrWhiteSpace(fileNames[index]))
-				{
-					<p class="mb-2"><strong>@fileNames[index]</strong></p>
-				}
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="border rounded p-3 h-100">
+                <h4>Export by Folder</h4>
+                <p class="mb-3">Convert all images in a folder to PNG or WebP and save them to a destination folder.</p>
+                <a class="btn btn-primary" href="/exportarextension">Go to Export Folder</a>
+            </div>
+        </div>
 
-				@if (!string.IsNullOrWhiteSpace(errors[index]))
-				{
-					<p class="text-danger mb-0">@errors[index]</p>
-				}
-				else if (!string.IsNullOrWhiteSpace(imagePreviews[index]))
-				{
-					<img src="@imagePreviews[index]" alt="Previsualitzacio @(index + 1)" class="img-fluid rounded border" />
-				}
-			</div>
-		</div>
-	}
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="border rounded p-3 h-100">
+                <h4>Export by File</h4>
+                <p class="mb-3">Convert a single image to PNG or WebP and choose its final destination.</p>
+                <a class="btn btn-primary" href="/exportarextensionarchivo">Go to Export File</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="border rounded p-4 bg-light">
+        <h3 class="mb-3">Recommended Workflow</h3>
+        <ol class="mb-0">
+            <li class="mb-2">
+                If you only have base textures, start in <a href="/crearmapas">Create Maps</a> or <a href="/crearmapascarpeta">Create Maps Folder</a> to generate AO, Roughness, and Metallic maps.
+            </li>
+            <li class="mb-2">
+                Once the maps are ready, build ORM textures in <a href="/autoarchivo">Create ORM Image</a> (single case) or <a href="/autocarpeta">Create ORM Folder</a> (larger projects).
+            </li>
+            <li>
+                If you need to standardize formats for your engine or pipeline, finish in <a href="/exportarextensionarchivo">Export File</a> or <a href="/exportarextension">Export Folder</a>.
+            </li>
+        </ol>
+    </div>
 </div>
-
-@if (AreAllInputsSelected)
-{
-	<div class="mt-4 p-3 border rounded">
-		<p class="mb-3">S'han seleccionat les 3 imatges. Vols crear la imatge ORM?</p>
-		<button class="btn btn-success me-2" @onclick="CreateOrmImageAsync">Si, crear ORM</button>
-		<button class="btn btn-outline-secondary" @onclick="DeclineOrmCreation">No</button>
-	</div>
-}
-
-@if (userDeclinedCreation)
-{
-	<p class="text-muted mt-3">No s'ha generat la imatge ORM.</p>
-}
-
-@if (!string.IsNullOrWhiteSpace(ormError))
-{
-	<p class="text-danger mt-3">@ormError</p>
-}
-
-@if (!string.IsNullOrWhiteSpace(ormPreview))
-{
-	<div class="mt-4">
-		<h4>Resultat ORM</h4>
-		<div class="row g-2 mb-3">
-			<div class="col-12 col-md-5">
-				<label class="form-label" for="outputName">Nom del fitxer</label>
-				<input id="outputName" class="form-control" @bind="outputFileName" />
-			</div>
-			<div class="col-12 col-md-3">
-				<label class="form-label" for="outputFormat">Format</label>
-				<select id="outputFormat" class="form-select" @bind="selectedOutputFormat">
-					<option value="png">PNG</option>
-					<option value="webp">WebP (Lossy 80%)</option>
-				</select>
-			</div>
-			<div class="col-12 col-md-4 d-flex align-items-end">
-				<div class="form-check mb-1">
-					<input id="chooseLocation" class="form-check-input" type="checkbox" @bind="chooseSaveLocation" disabled="@(!savePickerSupported)" />
-					<label class="form-check-label" for="chooseLocation">Escollir ubicacio en desar</label>
-				</div>
-			</div>
-		</div>
-		@if (!savePickerSupported)
-		{
-			<p class="text-warning mb-3">Firefox no permet aquest selector de carpeta. S'utilitzara la descarrrega normal del navegador.</p>
-		}
-		<button class="btn btn-primary mb-3" @onclick="DownloadOrmImageAsync">Descarregar ORM</button>
-		<img src="@ormPreview" alt="Resultat ORM" class="img-fluid rounded border" />
-	</div>
-}
-
-@code {
-	private const long MaxImageSizeBytes = 10 * 1024 * 1024;
-	private static readonly string[] ColumnTitles = ["Ambient Occlusion", "Roughness", "Metallic"];
-
-	private readonly string[] imagePreviews = new string[3];
-	private readonly string[] fileNames = new string[3];
-	private readonly string[] errors = new string[3];
-	private string ormPreview = string.Empty;
-	private string ormError = string.Empty;
-	private bool userDeclinedCreation;
-	private string outputFileName = "orm_texture";
-	private string selectedOutputFormat = "png";
-	private bool chooseSaveLocation = true;
-	private bool savePickerSupported = true;
-
-	private bool AreAllInputsSelected => imagePreviews.All(src => !string.IsNullOrWhiteSpace(src));
-
-	private async Task OnImageSelected(InputFileChangeEventArgs e, int index)
-	{
-		var file = e.File;
-		ormPreview = string.Empty;
-		ormError = string.Empty;
-		userDeclinedCreation = false;
-
-		if (!file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
-		{
-			errors[index] = "El fitxer seleccionat no es una imatge valida.";
-			imagePreviews[index] = string.Empty;
-			fileNames[index] = string.Empty;
-			return;
-		}
-
-		await using var stream = file.OpenReadStream(MaxImageSizeBytes);
-		using var memoryStream = new MemoryStream();
-		await stream.CopyToAsync(memoryStream);
-
-		var bytes = memoryStream.ToArray();
-		var base64 = Convert.ToBase64String(bytes);
-
-		imagePreviews[index] = $"data:{file.ContentType};base64,{base64}";
-		fileNames[index] = file.Name;
-		errors[index] = string.Empty;
-		UpdateDefaultOutputName();
-
-		if (index == 0 && IsAoFileName(file.Name))
-		{
-			await TryAutoLoadCompanionMapsAsync(file.Name);
-		}
-	}
-
-	private static bool IsAoFileName(string fileName)
-	{
-		var nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
-		return nameWithoutExtension.EndsWith("_AO", StringComparison.OrdinalIgnoreCase);
-	}
-
-	private async Task TryAutoLoadCompanionMapsAsync(string aoFileName)
-	{
-		try
-		{
-			var result = await JS.InvokeAsync<AutoLoadResult>("ormBuilder.findAndLoadCompanionMaps", aoFileName);
-
-			if (result is null || !result.Success)
-			{
-				if (!string.IsNullOrWhiteSpace(result?.ErrorMessage))
-				{
-					ormError = result.ErrorMessage;
-				}
-
-				return;
-			}
-
-			if (!string.IsNullOrWhiteSpace(result.RoughnessDataUrl) && !string.IsNullOrWhiteSpace(result.RoughnessFileName))
-			{
-				imagePreviews[1] = result.RoughnessDataUrl;
-				fileNames[1] = result.RoughnessFileName;
-				errors[1] = string.Empty;
-			}
-
-			if (!string.IsNullOrWhiteSpace(result.MetallicDataUrl) && !string.IsNullOrWhiteSpace(result.MetallicFileName))
-			{
-				imagePreviews[2] = result.MetallicDataUrl;
-				fileNames[2] = result.MetallicFileName;
-				errors[2] = string.Empty;
-			}
-
-			UpdateDefaultOutputName();
-			ormError = string.Empty;
-		}
-		catch
-		{
-			ormError = "No s'han pogut carregar automaticament Roughness i Metallic.";
-		}
-	}
-
-	private async Task CreateOrmImageAsync()
-	{
-		if (!AreAllInputsSelected)
-		{
-			return;
-		}
-
-		try
-		{
-			ormPreview = await JS.InvokeAsync<string>(
-				"ormBuilder.createOrm",
-				imagePreviews[0],
-				imagePreviews[1],
-				imagePreviews[2]);
-
-			ormError = string.Empty;
-			userDeclinedCreation = false;
-		}
-		catch (Exception)
-		{
-			ormPreview = string.Empty;
-			ormError = "No s'ha pogut crear la imatge ORM.";
-		}
-	}
-
-	private void DeclineOrmCreation()
-	{
-		ormPreview = string.Empty;
-		ormError = string.Empty;
-		userDeclinedCreation = true;
-	}
-
-	private async Task DownloadOrmImageAsync()
-	{
-		if (string.IsNullOrWhiteSpace(ormPreview))
-		{
-			return;
-		}
-
-		var safeBaseName = string.IsNullOrWhiteSpace(outputFileName)
-			? "orm_texture"
-			: outputFileName.Trim();
-
-		var extension = selectedOutputFormat.Equals("webp", StringComparison.OrdinalIgnoreCase)
-			? "webp"
-			: "png";
-
-		var fileName = $"{safeBaseName}.{extension}";
-		var quality = extension == "webp" ? 0.8 : 1.0;
-
-		var savedWithPicker = await JS.InvokeAsync<bool>(
-			"ormBuilder.downloadWithFormat",
-			ormPreview,
-			fileName,
-			extension,
-			quality,
-			chooseSaveLocation);
-
-		if (chooseSaveLocation && !savedWithPicker)
-		{
-			ormError = "El navegador no pot obrir el selector de carpeta. A Firefox activa 'Preguntar sempre on desar els fitxers' per triar ubicacio.";
-		}
-	}
-
-	protected override async Task OnAfterRenderAsync(bool firstRender)
-	{
-		if (!firstRender)
-		{
-			return;
-		}
-
-		savePickerSupported = await JS.InvokeAsync<bool>("ormBuilder.supportsSaveFilePicker");
-		if (!savePickerSupported)
-		{
-			chooseSaveLocation = false;
-			StateHasChanged();
-		}
-	}
-
-	private void UpdateDefaultOutputName()
-	{
-		var baseName = GetBaseNameFromLoadedFiles();
-		if (!string.IsNullOrWhiteSpace(baseName))
-		{
-			outputFileName = $"{baseName}_ORM";
-		}
-	}
-
-	private string? GetBaseNameFromLoadedFiles()
-	{
-		foreach (var loadedName in fileNames)
-		{
-			if (string.IsNullOrWhiteSpace(loadedName))
-			{
-				continue;
-			}
-
-			var nameWithoutExtension = Path.GetFileNameWithoutExtension(loadedName);
-			if (nameWithoutExtension.EndsWith("_AO", StringComparison.OrdinalIgnoreCase))
-			{
-				return nameWithoutExtension[..^3];
-			}
-
-			if (nameWithoutExtension.EndsWith("_Roug", StringComparison.OrdinalIgnoreCase))
-			{
-				return nameWithoutExtension[..^5];
-			}
-
-			if (nameWithoutExtension.EndsWith("_Glo", StringComparison.OrdinalIgnoreCase))
-			{
-				return nameWithoutExtension[..^4];
-			}
-
-			if (nameWithoutExtension.EndsWith("_Glos", StringComparison.OrdinalIgnoreCase))
-			{
-				return nameWithoutExtension[..^5];
-			}
-		}
-
-		return null;
-	}
-
-	private sealed class AutoLoadResult
-	{
-		public bool Success { get; set; }
-		public string? ErrorMessage { get; set; }
-		public string? RoughnessDataUrl { get; set; }
-		public string? RoughnessFileName { get; set; }
-		public string? MetallicDataUrl { get; set; }
-		public string? MetallicFileName { get; set; }
-	}
-}
