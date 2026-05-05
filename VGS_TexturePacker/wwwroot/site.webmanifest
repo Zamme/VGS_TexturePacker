@@ -1,0 +1,47 @@
+{
+  "name": "VGS Texture Packer",
+  "short_name": "TexturePacker",
+  "description": "Generate PBR maps, build ORM textures, and export image assets.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f1530",
+  "theme_color": "#1c2545",
+  "icons": [
+    {
+      "src": "favicon.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Create ORM Image",
+      "short_name": "ORM Image",
+      "url": "/autoarchivo"
+    },
+    {
+      "name": "Create Maps",
+      "short_name": "Maps",
+      "url": "/crearmapas"
+    }
+  ]
+}
