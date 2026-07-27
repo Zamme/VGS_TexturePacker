@@ -7,7 +7,7 @@
 
 <h1>Create Maps</h1>
 
-<p>Upload a diffuse texture (base color) and the Ambient Occlusion, Roughness, and Metallic maps will be generated automatically.</p>
+<p>Upload a diffuse texture (base color) and the Ambient Occlusion, Roughness, Metallic, and Normal maps will be generated automatically.</p>
 
 <div class="mb-3">
     <label class="btn btn-primary">
@@ -55,6 +55,11 @@
                 <input id="metallicIntensityRange" type="range" class="form-range" min="0" max="200" @bind="metallicIntensityPercent" @bind:event="oninput" />
             </div>
 
+            <div class="mb-3">
+                <label class="form-label" for="normalStrengthRange">Normal Strength: @normalStrengthPercent%</label>
+                <input id="normalStrengthRange" type="range" class="form-range" min="0" max="300" @bind="normalStrengthPercent" @bind:event="oninput" />
+            </div>
+
             <button class="btn btn-secondary" @onclick="RegenerateMapsAsync">Regenerate Maps</button>
         </div>
     </div>
@@ -65,25 +70,32 @@
     <div class="mt-4">
         <h4>Generated Maps</h4>
         <div class="row g-3 mt-1">
-            <div class="col-12 col-md-4">
+            <div class="col-12 col-md-6 col-lg-3">
                 <div class="border rounded p-3 h-100">
                     <h5>Ambient Occlusion</h5>
                     <img src="@aoPreview" alt="Ambient Occlusion Map" class="img-fluid rounded border mb-3" />
                     <button class="btn btn-outline-primary w-100" @onclick='() => DownloadMapAsync(aoPreview, "AO")'>Download AO</button>
                 </div>
             </div>
-            <div class="col-12 col-md-4">
+            <div class="col-12 col-md-6 col-lg-3">
                 <div class="border rounded p-3 h-100">
                     <h5>Roughness</h5>
                     <img src="@roughnessPreview" alt="Roughness Map" class="img-fluid rounded border mb-3" />
                     <button class="btn btn-outline-primary w-100" @onclick='() => DownloadMapAsync(roughnessPreview, "Roughness")'>Download Roughness</button>
                 </div>
             </div>
-            <div class="col-12 col-md-4">
+            <div class="col-12 col-md-6 col-lg-3">
                 <div class="border rounded p-3 h-100">
                     <h5>Metallic</h5>
                     <img src="@metallicPreview" alt="Metallic Map" class="img-fluid rounded border mb-3" />
                     <button class="btn btn-outline-primary w-100" @onclick='() => DownloadMapAsync(metallicPreview, "Metallic")'>Download Metallic</button>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="border rounded p-3 h-100">
+                    <h5>Normal</h5>
+                    <img src="@normalPreview" alt="Normal Map" class="img-fluid rounded border mb-3" />
+                    <button class="btn btn-outline-primary w-100" @onclick='() => DownloadMapAsync(normalPreview, "Normal")'>Download Normal</button>
                 </div>
             </div>
         </div>
@@ -101,16 +113,19 @@
     private string aoPreview = string.Empty;
     private string roughnessPreview = string.Empty;
     private string metallicPreview = string.Empty;
+    private string normalPreview = string.Empty;
     private string errorMessage = string.Empty;
     private int aoStrengthPercent = 100;
     private int roughnessContrastPercent = 100;
     private int metallicThresholdPercent = 50;
     private int metallicIntensityPercent = 60;
+    private int normalStrengthPercent = 120;
 
     private bool HasGeneratedMaps =>
         !string.IsNullOrWhiteSpace(aoPreview)
         && !string.IsNullOrWhiteSpace(roughnessPreview)
-        && !string.IsNullOrWhiteSpace(metallicPreview);
+        && !string.IsNullOrWhiteSpace(metallicPreview)
+        && !string.IsNullOrWhiteSpace(normalPreview);
 
     private async Task OnDiffuseSelectedAsync(InputFileChangeEventArgs e)
     {
@@ -176,6 +191,7 @@
         await DownloadMapAsync(aoPreview, "AO");
         await DownloadMapAsync(roughnessPreview, "Roug");
         await DownloadMapAsync(metallicPreview, "Glos");
+        await DownloadMapAsync(normalPreview, "Norm");
     }
 
     private async Task RegenerateMapsAsync()
@@ -200,12 +216,14 @@
                 aoStrengthPercent / 100.0,
                 roughnessContrastPercent / 100.0,
                 metallicThresholdPercent / 100.0,
-                metallicIntensityPercent / 100.0);
+                metallicIntensityPercent / 100.0,
+                normalStrengthPercent / 100.0);
 
             if (generated is null
                 || string.IsNullOrWhiteSpace(generated.Ao)
                 || string.IsNullOrWhiteSpace(generated.Roughness)
-                || string.IsNullOrWhiteSpace(generated.Metallic))
+                || string.IsNullOrWhiteSpace(generated.Metallic)
+                || string.IsNullOrWhiteSpace(generated.Normal))
             {
                 errorMessage = "Could not generate maps with the current settings.";
                 ResetGeneratedMaps();
@@ -215,6 +233,7 @@
             aoPreview = generated.Ao;
             roughnessPreview = generated.Roughness;
             metallicPreview = generated.Metallic;
+            normalPreview = generated.Normal;
         }
         catch
         {
@@ -228,6 +247,7 @@
         aoPreview = string.Empty;
         roughnessPreview = string.Empty;
         metallicPreview = string.Empty;
+        normalPreview = string.Empty;
     }
 
     private sealed class GeneratedMapsResult
@@ -235,5 +255,6 @@
         public string Ao { get; set; } = string.Empty;
         public string Roughness { get; set; } = string.Empty;
         public string Metallic { get; set; } = string.Empty;
+        public string Normal { get; set; } = string.Empty;
     }
 }

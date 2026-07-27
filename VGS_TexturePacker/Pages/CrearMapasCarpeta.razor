@@ -5,7 +5,7 @@
 
 <h1>Create Maps Folder</h1>
 
-<p>Select a folder with diffuse textures. AO, Roughness, and Gloss maps will be generated for each image in a new folder named Maps+CurrentTime.</p>
+<p>Select a folder with diffuse textures. AO, Roughness, Gloss, and Normal maps will be generated for each image in a new folder named Maps+CurrentTime.</p>
 
 <div class="mt-4 border rounded p-3">
     <h5>Generation Settings</h5>
@@ -25,9 +25,14 @@
         <input id="metallicThresholdFolderRange" type="range" class="form-range" min="0" max="100" @bind="metallicThresholdPercent" @bind:event="oninput" />
     </div>
 
-    <div class="mb-0">
+    <div class="mb-3">
         <label class="form-label" for="metallicIntensityFolderRange">Metallic Intensity: @metallicIntensityPercent%</label>
         <input id="metallicIntensityFolderRange" type="range" class="form-range" min="0" max="200" @bind="metallicIntensityPercent" @bind:event="oninput" />
+    </div>
+
+    <div class="mb-0">
+        <label class="form-label" for="normalStrengthFolderRange">Normal Strength: @normalStrengthPercent%</label>
+        <input id="normalStrengthFolderRange" type="range" class="form-range" min="0" max="300" @bind="normalStrengthPercent" @bind:event="oninput" />
     </div>
 </div>
 
@@ -88,6 +93,7 @@
     private int roughnessContrastPercent = 100;
     private int metallicThresholdPercent = 50;
     private int metallicIntensityPercent = 60;
+    private int normalStrengthPercent = 120;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -117,7 +123,8 @@
                 aoStrengthPercent / 100.0,
                 roughnessContrastPercent / 100.0,
                 metallicThresholdPercent / 100.0,
-                metallicIntensityPercent / 100.0);
+                metallicIntensityPercent / 100.0,
+                normalStrengthPercent / 100.0);
 
             if (result is null)
             {

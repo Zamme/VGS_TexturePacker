@@ -985,7 +985,7 @@
                     };
                 }
             },
-            processFolderCreateMaps: async function (aoStrength, roughnessContrast, metallicThreshold, metallicIntensity) {
+            processFolderCreateMaps: async function (aoStrength, roughnessContrast, metallicThreshold, metallicIntensity, normalStrength) {
                 if (!("showDirectoryPicker" in window)) {
                     return {
                         success: false,
@@ -1014,6 +1014,7 @@
                     ? Math.min(1, Math.max(0, metallicThreshold))
                     : 0.5;
                 const safeMetallicIntensity = Number.isFinite(metallicIntensity) ? Math.max(0, metallicIntensity) : 0.6;
+                const safeNormalStrength = Number.isFinite(normalStrength) ? Math.max(0, normalStrength) : 1.2;
 
                 const isImageFile = (fileName, fileType) => {
                     if (fileType && fileType.toLowerCase().startsWith("image/")) {
@@ -1076,9 +1077,10 @@
                                 safeAoStrength,
                                 safeRoughnessContrast,
                                 safeMetallicThreshold,
-                                safeMetallicIntensity);
+                                safeMetallicIntensity,
+                                safeNormalStrength);
 
-                            if (!maps || !maps.ao || !maps.roughness || !maps.metallic) {
+                            if (!maps || !maps.ao || !maps.roughness || !maps.metallic || !maps.normal) {
                                 throw new Error("Could not generate all maps.");
                             }
 
@@ -1089,10 +1091,12 @@
                             const aoBlob = await dataUrlToBlob(maps.ao);
                             const roughnessBlob = await dataUrlToBlob(maps.roughness);
                             const metallicBlob = await dataUrlToBlob(maps.metallic);
+                            const normalBlob = await dataUrlToBlob(maps.normal);
 
                             await createFileInFolder(outputDirHandle, `${baseName}_AO.png`, aoBlob);
                             await createFileInFolder(outputDirHandle, `${baseName}_Roug.png`, roughnessBlob);
                             await createFileInFolder(outputDirHandle, `${baseName}_Glos.png`, metallicBlob);
+                            await createFileInFolder(outputDirHandle, `${baseName}_Norm.png`, normalBlob);
 
                             result.processedCount += 1;
                         } catch (error) {
@@ -1173,13 +1177,14 @@
                 ctx.putImageData(ormData, 0, 0);
                 return canvas.toDataURL("image/png");
             },
-            createMapsFromDiffuse: async function (diffuseSrc, aoStrength, roughnessContrast, metallicThreshold, metallicIntensity) {
+            createMapsFromDiffuse: async function (diffuseSrc, aoStrength, roughnessContrast, metallicThreshold, metallicIntensity, normalStrength) {
                 const clamp01 = (value) => Math.min(1, Math.max(0, value));
 
                 const safeAoStrength = Number.isFinite(aoStrength) ? Math.max(0, aoStrength) : 1.0;
                 const safeRoughnessContrast = Number.isFinite(roughnessContrast) ? Math.max(0, roughnessContrast) : 1.0;
                 const safeMetallicThreshold = Number.isFinite(metallicThreshold) ? clamp01(metallicThreshold) : 0.5;
                 const safeMetallicIntensity = Number.isFinite(metallicIntensity) ? Math.max(0, metallicIntensity) : 0.6;
+                const safeNormalStrength = Number.isFinite(normalStrength) ? Math.max(0, normalStrength) : 1.2;
 
                 const loadImage = (src) => new Promise((resolve, reject) => {
                     const img = new Image();
@@ -1258,10 +1263,63 @@
                     return Math.pow(normalized, 1.5) * safeMetallicIntensity;
                 });
 
+                const normalCanvas = document.createElement("canvas");
+                normalCanvas.width = width;
+                normalCanvas.height = height;
+
+                const normalCtx = normalCanvas.getContext("2d");
+                if (!normalCtx) {
+                    throw new Error("Could not create a canvas for the normal map.");
+                }
+
+                const getLuminance = (x, y) => {
+                    const clampedX = Math.max(0, Math.min(width - 1, x));
+                    const clampedY = Math.max(0, Math.min(height - 1, y));
+                    const index = (clampedY * width + clampedX) * 4;
+
+                    const r = source[index] / 255;
+                    const g = source[index + 1] / 255;
+                    const b = source[index + 2] / 255;
+
+                    const linearR = Math.pow(r, 2.2);
+                    const linearG = Math.pow(g, 2.2);
+                    const linearB = Math.pow(b, 2.2);
+                    return (0.2126 * linearR) + (0.7152 * linearG) + (0.0722 * linearB);
+                };
+
+                const normalImageData = normalCtx.createImageData(width, height);
+                for (let y = 0; y < height; y += 1) {
+                    for (let x = 0; x < width; x += 1) {
+                        const left = getLuminance(x - 1, y);
+                        const right = getLuminance(x + 1, y);
+                        const up = getLuminance(x, y - 1);
+                        const down = getLuminance(x, y + 1);
+
+                        const dx = (left - right) * safeNormalStrength;
+                        const dy = (up - down) * safeNormalStrength;
+                        const dz = 1.0;
+
+                        const length = Math.sqrt((dx * dx) + (dy * dy) + (dz * dz)) || 1.0;
+                        const nx = dx / length;
+                        const ny = dy / length;
+                        const nz = dz / length;
+
+                        const pixel = (y * width + x) * 4;
+                        normalImageData.data[pixel] = Math.round((nx * 0.5 + 0.5) * 255);
+                        normalImageData.data[pixel + 1] = Math.round((ny * 0.5 + 0.5) * 255);
+                        normalImageData.data[pixel + 2] = Math.round((nz * 0.5 + 0.5) * 255);
+                        normalImageData.data[pixel + 3] = 255;
+                    }
+                }
+
+                normalCtx.putImageData(normalImageData, 0, 0);
+                const normal = normalCanvas.toDataURL("image/png");
+
                 return {
                     ao: ao,
                     roughness: roughness,
-                    metallic: metallic
+                    metallic: metallic,
+                    normal: normal
                 };
             },
             downloadWithFormat: async function (dataUrl, fileName, format, quality, chooseLocation) {

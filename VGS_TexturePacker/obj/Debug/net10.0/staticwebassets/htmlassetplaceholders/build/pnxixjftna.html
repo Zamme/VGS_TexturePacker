@@ -19,7 +19,7 @@
     <meta name="twitter:description" content="Generate maps, build ORM textures, and export assets in one place." />
     <meta name="twitter:image" content="icon-512.png" />
     <base href="/" />
-    <link href="_framework/dotnet.dzsvo6kqjb.js" rel="preload" as="script" fetchpriority="high" crossorigin="anonymous" integrity="sha256-eVTsmPuJkI5jLYdNY3h4+Qbr3a6Z3YpMJX2qgYK2qD4=" />
+    <link href="_framework/dotnet.sa4x26wyx2.js" rel="preload" as="script" fetchpriority="high" crossorigin="anonymous" integrity="sha256-BC5qsIWIWlFCaP9GcRCC/b6X61YIFU800yFvZx2OtEM=" />
     <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="css/app.css" />
     <link rel="manifest" href="site.webmanifest" />
@@ -30,9 +30,9 @@
   "imports": {
     "./_content/Microsoft.DotNet.HotReload.WebAssembly.Browser/Microsoft.DotNet.HotReload.WebAssembly.Browser.lib.module.js": "./_content/Microsoft.DotNet.HotReload.WebAssembly.Browser/Microsoft.DotNet.HotReload.WebAssembly.Browser.99zm1jdh75.lib.module.js",
     "./_framework/blazor.webassembly.js": "./_framework/blazor.webassembly.66stpp682q.js",
-    "./_framework/dotnet.js": "./_framework/dotnet.dzsvo6kqjb.js",
     "./_framework/dotnet.native.js": "./_framework/dotnet.native.4xbsgn06op.js",
     "./_framework/dotnet.runtime.js": "./_framework/dotnet.runtime.zj9dll5ffg.js",
+    "./_framework/dotnet.js": "./_framework/dotnet.sa4x26wyx2.js",
     "./lib/bootstrap/dist/js/bootstrap.bundle.min.js": "./lib/bootstrap/dist/js/bootstrap.bundle.min.493y06b0oq.js",
     "./lib/bootstrap/dist/js/bootstrap.bundle.js": "./lib/bootstrap/dist/js/bootstrap.bundle.rfxqw5gdy3.js",
     "./lib/bootstrap/dist/js/bootstrap.js": "./lib/bootstrap/dist/js/bootstrap.creq0kal2k.js",
@@ -46,12 +46,12 @@
     "./_content/Microsoft.DotNet.HotReload.WebAssembly.Browser/Microsoft.DotNet.HotReload.WebAssembly.Browser.lib.module.js": "sha256-A8e6zZwhOqf7lDQqbbCYcAUv4wGE9aQxOo4WyYxR//0=",
     "./_framework/blazor.webassembly.66stpp682q.js": "sha256-3lCWrko3zwspV40aQhs2S/IMkRSarnHRKIdkHhuXIBA=",
     "./_framework/blazor.webassembly.js": "sha256-3lCWrko3zwspV40aQhs2S/IMkRSarnHRKIdkHhuXIBA=",
-    "./_framework/dotnet.dzsvo6kqjb.js": "sha256-eVTsmPuJkI5jLYdNY3h4+Qbr3a6Z3YpMJX2qgYK2qD4=",
-    "./_framework/dotnet.js": "sha256-eVTsmPuJkI5jLYdNY3h4+Qbr3a6Z3YpMJX2qgYK2qD4=",
+    "./_framework/dotnet.js": "sha256-BC5qsIWIWlFCaP9GcRCC/b6X61YIFU800yFvZx2OtEM=",
     "./_framework/dotnet.native.4xbsgn06op.js": "sha256-WHdERxxgCQA79nOtWAOvxQ2f7p1kEx+swJwfE4AE9Nk=",
     "./_framework/dotnet.native.js": "sha256-WHdERxxgCQA79nOtWAOvxQ2f7p1kEx+swJwfE4AE9Nk=",
     "./_framework/dotnet.runtime.js": "sha256-YdXsn/a7hb+UMypOFCf8bmv3S6PbDPewiNWqmUM/1dk=",
     "./_framework/dotnet.runtime.zj9dll5ffg.js": "sha256-YdXsn/a7hb+UMypOFCf8bmv3S6PbDPewiNWqmUM/1dk=",
+    "./_framework/dotnet.sa4x26wyx2.js": "sha256-BC5qsIWIWlFCaP9GcRCC/b6X61YIFU800yFvZx2OtEM=",
     "./lib/bootstrap/dist/js/bootstrap.bundle.js": "sha256-x79E2wG4dZxWK7d7tTI/M4SeeI/DUhB+XL6CDs4qInI=",
     "./lib/bootstrap/dist/js/bootstrap.bundle.min.493y06b0oq.js": "sha256-CDOy6cOibCWEdsRiZuaHf8dSGGJRYuBGC+mjoJimHGw=",
     "./lib/bootstrap/dist/js/bootstrap.bundle.min.js": "sha256-CDOy6cOibCWEdsRiZuaHf8dSGGJRYuBGC+mjoJimHGw=",
@@ -1024,7 +1024,7 @@
                     };
                 }
             },
-            processFolderCreateMaps: async function (aoStrength, roughnessContrast, metallicThreshold, metallicIntensity) {
+            processFolderCreateMaps: async function (aoStrength, roughnessContrast, metallicThreshold, metallicIntensity, normalStrength) {
                 if (!("showDirectoryPicker" in window)) {
                     return {
                         success: false,
@@ -1053,6 +1053,7 @@
                     ? Math.min(1, Math.max(0, metallicThreshold))
                     : 0.5;
                 const safeMetallicIntensity = Number.isFinite(metallicIntensity) ? Math.max(0, metallicIntensity) : 0.6;
+                const safeNormalStrength = Number.isFinite(normalStrength) ? Math.max(0, normalStrength) : 1.2;
 
                 const isImageFile = (fileName, fileType) => {
                     if (fileType && fileType.toLowerCase().startsWith("image/")) {
@@ -1115,9 +1116,10 @@
                                 safeAoStrength,
                                 safeRoughnessContrast,
                                 safeMetallicThreshold,
-                                safeMetallicIntensity);
+                                safeMetallicIntensity,
+                                safeNormalStrength);
 
-                            if (!maps || !maps.ao || !maps.roughness || !maps.metallic) {
+                            if (!maps || !maps.ao || !maps.roughness || !maps.metallic || !maps.normal) {
                                 throw new Error("Could not generate all maps.");
                             }
 
@@ -1128,10 +1130,12 @@
                             const aoBlob = await dataUrlToBlob(maps.ao);
                             const roughnessBlob = await dataUrlToBlob(maps.roughness);
                             const metallicBlob = await dataUrlToBlob(maps.metallic);
+                            const normalBlob = await dataUrlToBlob(maps.normal);
 
                             await createFileInFolder(outputDirHandle, `${baseName}_AO.png`, aoBlob);
                             await createFileInFolder(outputDirHandle, `${baseName}_Roug.png`, roughnessBlob);
                             await createFileInFolder(outputDirHandle, `${baseName}_Glos.png`, metallicBlob);
+                            await createFileInFolder(outputDirHandle, `${baseName}_Norm.png`, normalBlob);
 
                             result.processedCount += 1;
                         } catch (error) {
@@ -1212,13 +1216,14 @@
                 ctx.putImageData(ormData, 0, 0);
                 return canvas.toDataURL("image/png");
             },
-            createMapsFromDiffuse: async function (diffuseSrc, aoStrength, roughnessContrast, metallicThreshold, metallicIntensity) {
+            createMapsFromDiffuse: async function (diffuseSrc, aoStrength, roughnessContrast, metallicThreshold, metallicIntensity, normalStrength) {
                 const clamp01 = (value) => Math.min(1, Math.max(0, value));
 
                 const safeAoStrength = Number.isFinite(aoStrength) ? Math.max(0, aoStrength) : 1.0;
                 const safeRoughnessContrast = Number.isFinite(roughnessContrast) ? Math.max(0, roughnessContrast) : 1.0;
                 const safeMetallicThreshold = Number.isFinite(metallicThreshold) ? clamp01(metallicThreshold) : 0.5;
                 const safeMetallicIntensity = Number.isFinite(metallicIntensity) ? Math.max(0, metallicIntensity) : 0.6;
+                const safeNormalStrength = Number.isFinite(normalStrength) ? Math.max(0, normalStrength) : 1.2;
 
                 const loadImage = (src) => new Promise((resolve, reject) => {
                     const img = new Image();
@@ -1297,10 +1302,63 @@
                     return Math.pow(normalized, 1.5) * safeMetallicIntensity;
                 });
 
+                const normalCanvas = document.createElement("canvas");
+                normalCanvas.width = width;
+                normalCanvas.height = height;
+
+                const normalCtx = normalCanvas.getContext("2d");
+                if (!normalCtx) {
+                    throw new Error("Could not create a canvas for the normal map.");
+                }
+
+                const getLuminance = (x, y) => {
+                    const clampedX = Math.max(0, Math.min(width - 1, x));
+                    const clampedY = Math.max(0, Math.min(height - 1, y));
+                    const index = (clampedY * width + clampedX) * 4;
+
+                    const r = source[index] / 255;
+                    const g = source[index + 1] / 255;
+                    const b = source[index + 2] / 255;
+
+                    const linearR = Math.pow(r, 2.2);
+                    const linearG = Math.pow(g, 2.2);
+                    const linearB = Math.pow(b, 2.2);
+                    return (0.2126 * linearR) + (0.7152 * linearG) + (0.0722 * linearB);
+                };
+
+                const normalImageData = normalCtx.createImageData(width, height);
+                for (let y = 0; y < height; y += 1) {
+                    for (let x = 0; x < width; x += 1) {
+                        const left = getLuminance(x - 1, y);
+                        const right = getLuminance(x + 1, y);
+                        const up = getLuminance(x, y - 1);
+                        const down = getLuminance(x, y + 1);
+
+                        const dx = (left - right) * safeNormalStrength;
+                        const dy = (up - down) * safeNormalStrength;
+                        const dz = 1.0;
+
+                        const length = Math.sqrt((dx * dx) + (dy * dy) + (dz * dz)) || 1.0;
+                        const nx = dx / length;
+                        const ny = dy / length;
+                        const nz = dz / length;
+
+                        const pixel = (y * width + x) * 4;
+                        normalImageData.data[pixel] = Math.round((nx * 0.5 + 0.5) * 255);
+                        normalImageData.data[pixel + 1] = Math.round((ny * 0.5 + 0.5) * 255);
+                        normalImageData.data[pixel + 2] = Math.round((nz * 0.5 + 0.5) * 255);
+                        normalImageData.data[pixel + 3] = 255;
+                    }
+                }
+
+                normalCtx.putImageData(normalImageData, 0, 0);
+                const normal = normalCanvas.toDataURL("image/png");
+
                 return {
                     ao: ao,
                     roughness: roughness,
-                    metallic: metallic
+                    metallic: metallic,
+                    normal: normal
                 };
             },
             downloadWithFormat: async function (dataUrl, fileName, format, quality, chooseLocation) {
