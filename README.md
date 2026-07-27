@@ -40,6 +40,11 @@ dotnet run --project VGS_TexturePacker/VGS_TexturePacker.csproj
 
 Then open the local URL shown in the terminal.
 
+## GitHub Pages
+
+- Official URL: https://zamme.github.io/VGS_TexturePacker/
+- If you use `https://zamme.github.io/TexturePacker/`, it will return 404.
+
 ## Main Workflows
 
 1. Generate maps from diffuse textures:
@@ -66,6 +71,11 @@ Some features depend on:
 - `showSaveFilePicker`
 
 If these APIs are unavailable in the browser, the app reports feature limitations in the UI.
+
+Recommended:
+
+- Desktop Chrome or Edge for full folder/file picker support.
+- Some browsers (for example Firefox or Safari) may not support the required picker APIs.
 
 ## License
 
