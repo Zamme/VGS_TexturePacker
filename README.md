@@ -1,5 +1,7 @@
 # VGS Texture Packer
 
+[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Live%20Site-2ea44f?logo=github)](https://zamme.github.io/VGS_TexturePacker/)
+
 VGS Texture Packer is a Blazor WebAssembly app for building and converting texture assets used in PBR workflows.
 It provides a browser-based workspace to generate maps, pack ORM textures, and convert image formats in single-file and batch modes.
 
